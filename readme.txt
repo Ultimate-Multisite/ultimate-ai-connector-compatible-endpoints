@@ -1,5 +1,5 @@
 === OpenAI-Compatible Connector ===
-Contributors: superdav42
+Contributors: developer-starter
 Tags: ai, ollama, openai, llm, connectors
 Requires at least: 7.0
 Tested up to: 7.0
