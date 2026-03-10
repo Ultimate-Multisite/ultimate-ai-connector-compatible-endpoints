@@ -2,12 +2,12 @@
 /**
  * Provider class for a compatible AI endpoint.
  *
- * @package AiServicesConnector
+ * @package AiProviderCompatibleEndpoint
  */
 
 declare(strict_types=1);
 
-namespace AiServicesConnector;
+namespace AiProviderCompatibleEndpoint;
 
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;
 use WordPress\AiClient\Providers\ApiBasedImplementation\ListModelsApiBasedProviderAvailability;
@@ -26,7 +26,7 @@ use WordPress\AiClient\Common\Exception\RuntimeException;
  * The base URL is read from plugin settings and stored in a static property
  * so that it is available to the SDK's static `baseUrl()` method.
  */
-class AiServicesProvider extends AbstractApiProvider {
+class CompatibleEndpointProvider extends AbstractApiProvider {
 
 	/**
 	 * Configured endpoint URL. Set from options before registration.
@@ -52,7 +52,7 @@ class AiServicesProvider extends AbstractApiProvider {
 		$capabilities = $modelMetadata->getSupportedCapabilities();
 		foreach ( $capabilities as $capability ) {
 			if ( $capability->isTextGeneration() ) {
-				return new AiServicesModel( $modelMetadata, $providerMetadata );
+				return new CompatibleEndpointModel( $modelMetadata, $providerMetadata );
 			}
 		}
 
@@ -66,8 +66,8 @@ class AiServicesProvider extends AbstractApiProvider {
 	 */
 	protected static function createProviderMetadata(): ProviderMetadata {
 		return new ProviderMetadata(
-			'ai-services-connector',
-			'AI Services',
+			'ai-provider-for-any-compatible-endpoint',
+			'Compatible Endpoint',
 			ProviderTypeEnum::server(),
 			null,
 			RequestAuthenticationMethod::apiKey()
@@ -87,6 +87,6 @@ class AiServicesProvider extends AbstractApiProvider {
 	 * {@inheritDoc}
 	 */
 	protected static function createModelMetadataDirectory(): ModelMetadataDirectoryInterface {
-		return new AiServicesModelDirectory();
+		return new CompatibleEndpointModelDirectory();
 	}
 }

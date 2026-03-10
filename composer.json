@@ -1,5 +1,5 @@
 {
-	"name": "ultimate-multisite/ai-services-connector",
+	"name": "ultimate-multisite/ai-provider-for-any-compatible-endpoint",
 	"description": "Registers a WordPress AI Client provider for Ollama, LM Studio, or any AI endpoint using the standard chat completions API format.",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
@@ -21,9 +21,9 @@
 		"preferred-install": "dist",
 		"sort-packages": true
 	},
-	"homepage": "https://github.com/Ultimate-Multisite/ai-services-connector",
+	"homepage": "https://github.com/Ultimate-Multisite/ai-provider-for-any-compatible-endpoint",
 	"support": {
-		"issues": "https://github.com/Ultimate-Multisite/ai-services-connector/issues",
-		"source": "https://github.com/Ultimate-Multisite/ai-services-connector"
+		"issues": "https://github.com/Ultimate-Multisite/ai-provider-for-any-compatible-endpoint/issues",
+		"source": "https://github.com/Ultimate-Multisite/ai-provider-for-any-compatible-endpoint"
 	}
 }

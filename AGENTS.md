@@ -1,4 +1,4 @@
-# AGENTS.md — AI Services Connector
+# AGENTS.md — AI Provider for Any Compatible Endpoint
 
 WordPress plugin that registers an AI Client provider for Ollama, LM Studio, or any AI endpoint using the standard chat completions API format.
 
@@ -46,8 +46,8 @@ npx eslint src/
 ### PHP
 
 - **Strict types**: Every PHP file must declare `declare(strict_types=1);`
-- **Namespace**: `AiServicesConnector` for all classes and functions
-- **File headers**: Include `@package AiServicesConnector` in docblocks
+- **Namespace**: `AiProviderCompatibleEndpoint` for all classes and functions
+- **File headers**: Include `@package AiProviderCompatibleEndpoint` in docblocks
 - **WordPress standards**: Use WordPress coding style (tabs, Yoda conditions, etc.)
 - **Type hints**: Use PHP 7.4+ type declarations for parameters and return types
 - **Escaping**: Always escape output (`esc_html()`, `esc_url()`, `esc_attr()`)
@@ -59,7 +59,7 @@ npx eslint src/
 <?php
 declare(strict_types=1);
 
-namespace AiServicesConnector;
+namespace AiProviderCompatibleEndpoint;
 
 /**
  * Function description.
@@ -106,18 +106,18 @@ function MyComponent() {
 | Type | Convention | Example |
 |------|------------|---------|
 | PHP functions | `snake_case` | `register_settings()` |
-| PHP classes | `PascalCase` | `AiServicesProvider` |
-| PHP constants | `UPPER_SNAKE_CASE` | `AI_SERVICES_CONNECTOR_FILE` |
+| PHP classes | `PascalCase` | `CompatibleEndpointProvider` |
+| PHP constants | `UPPER_SNAKE_CASE` | `AI_PROVIDER_COMPATIBLE_ENDPOINT_FILE` |
 | JS functions | `camelCase` | `fetchModels()` |
-| JS components | `PascalCase` | `ConnectorCard` |
-| CSS classes | `kebab-case` | `connector-item--ai-services` |
-| Options | `snake_case` with prefix | `ai_services_endpoint_url` |
-| REST routes | `kebab-case` | `/ai-services-connector/v1/models` |
+| JS components | `PascalCase` | `CompatibleEndpointConnectorCard` |
+| CSS classes | `kebab-case` | `connector-item--ai-provider-for-any-compatible-endpoint` |
+| Options | `snake_case` with prefix | `ai_provider_endpoint_url` |
+| REST routes | `kebab-case` | `/ai-provider-for-any-compatible-endpoint/v1/models` |
 
 ### File Organization
 
 ```
-├── ai-services-connector.php       # Main plugin file, hooks
+├── ai-provider-for-any-compatible-endpoint.php  # Main plugin file, hooks
 ├── inc/
 │   ├── class-provider.php          # AbstractApiProvider implementation
 │   ├── class-model.php             # Text generation model
@@ -169,9 +169,9 @@ This plugin extends the WordPress AI Client SDK. Key classes:
 Provider registration pattern:
 ```php
 $registry = AiClient::defaultRegistry();
-$registry->registerProvider( AiServicesProvider::class );
+$registry->registerProvider( CompatibleEndpointProvider::class );
 $registry->setProviderRequestAuthentication(
-    AiServicesProvider::class,
+    CompatibleEndpointProvider::class,
     new ApiKeyRequestAuthentication( $api_key )
 );
 ```
@@ -186,14 +186,14 @@ The plugin adds filters to support self-hosted inference servers:
 
 ### Settings
 
-All settings use the `ai_services_` prefix:
+All settings use the `ai_provider_` prefix:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `ai_services_endpoint_url` | string | `''` | Base URL for API |
-| `ai_services_api_key` | string | `''` | Bearer token (optional) |
-| `ai_services_default_model` | string | `''` | Model ID to use |
-| `ai_services_timeout` | integer | `360` | Request timeout in seconds |
+| `ai_provider_endpoint_url` | string | `''` | Base URL for API |
+| `ai_provider_api_key` | string | `''` | Bearer token (optional) |
+| `ai_provider_default_model` | string | `''` | Model ID to use |
+| `ai_provider_timeout` | integer | `360` | Request timeout in seconds |
 
 ### Commit Messages
 

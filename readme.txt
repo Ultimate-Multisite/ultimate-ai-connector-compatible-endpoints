@@ -1,4 +1,4 @@
-=== AI Services Connector ===
+=== AI Provider for Any Compatible Endpoint ===
 Contributors: developer-starter
 Tags: ai, ollama, llm, connectors, local-ai, lm-studio
 Requires at least: 6.9
@@ -36,7 +36,7 @@ Other AI-powered plugins that use the WordPress AI Client (such as AI Experiment
 **How it works:**
 
 1. Install and activate the plugin.
-2. Go to **Settings > Connectors** and configure the "AI Services" connector with your endpoint URL (e.g. `http://localhost:11434/v1` for Ollama).
+2. Go to **Settings > Connectors** and configure the connector with your endpoint URL (e.g. `http://localhost:11434/v1` for Ollama).
 3. Optionally provide an API key for services that require authentication.
 4. The plugin registers a provider with the WordPress AI Client and dynamically discovers all available models from your endpoint.
 
@@ -44,10 +44,10 @@ The plugin also handles practical concerns like extended HTTP timeouts for slow 
 
 == Installation ==
 
-1. Upload the plugin files to `/wp-content/plugins/ai-services-connector/`.
+1. Upload the plugin files to `/wp-content/plugins/ai-provider-for-any-compatible-endpoint/`.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 3. **WordPress 6.9 only:** Make sure the [AI Experiments](https://wordpress.org/plugins/ai/) plugin is installed and active. It provides the AI Client SDK that this plugin requires.
-4. Go to **Settings > Connectors** and configure the "AI Services" connector.
+4. Go to **Settings > Connectors** and configure the connector.
 5. Optionally enter an API key if your endpoint requires one.
 
 == Frequently Asked Questions ==

@@ -1,21 +1,21 @@
 <?php
 /**
- * Settings registration for the AI Services Connector.
+ * Settings registration for the AI Provider for Any Compatible Endpoint plugin.
  *
- * @package AiServicesConnector
+ * @package AiProviderCompatibleEndpoint
  */
 
 declare(strict_types=1);
 
-namespace AiServicesConnector;
+namespace AiProviderCompatibleEndpoint;
 
 /**
  * Registers the plugin settings for the REST API and admin.
  */
 function register_settings(): void {
 	register_setting(
-		'ai_services_connector',
-		'ai_services_endpoint_url',
+		'ai_provider_connector',
+		'ai_provider_endpoint_url',
 		[
 			'type'              => 'string',
 			'sanitize_callback' => 'esc_url_raw',
@@ -25,8 +25,8 @@ function register_settings(): void {
 	);
 
 	register_setting(
-		'ai_services_connector',
-		'ai_services_api_key',
+		'ai_provider_connector',
+		'ai_provider_api_key',
 		[
 			'type'              => 'string',
 			'sanitize_callback' => 'sanitize_text_field',
@@ -36,8 +36,8 @@ function register_settings(): void {
 	);
 
 	register_setting(
-		'ai_services_connector',
-		'ai_services_default_model',
+		'ai_provider_connector',
+		'ai_provider_default_model',
 		[
 			'type'              => 'string',
 			'sanitize_callback' => 'sanitize_text_field',
@@ -47,8 +47,8 @@ function register_settings(): void {
 	);
 
 	register_setting(
-		'ai_services_connector',
-		'ai_services_timeout',
+		'ai_provider_connector',
+		'ai_provider_timeout',
 		[
 			'type'              => 'integer',
 			'sanitize_callback' => 'absint',

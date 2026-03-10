@@ -1,13 +1,13 @@
 <?php
 /**
- * Admin integration for the AI Services Connector.
+ * Admin integration for the AI Provider for Any Compatible Endpoint plugin.
  *
- * @package AiServicesConnector
+ * @package AiProviderCompatibleEndpoint
  */
 
 declare(strict_types=1);
 
-namespace AiServicesConnector;
+namespace AiProviderCompatibleEndpoint;
 
 /**
  * Enqueues the connector script module on the Connectors admin page.
@@ -17,8 +17,8 @@ namespace AiServicesConnector;
  */
 function enqueue_connector_module(): void {
 	wp_register_script_module(
-		'ai-services-connector',
-		plugins_url( 'build/connector.js', AI_SERVICES_CONNECTOR_FILE ),
+		'ai-provider-for-any-compatible-endpoint',
+		plugins_url( 'build/connector.js', AI_PROVIDER_COMPATIBLE_ENDPOINT_FILE ),
 		[
 			[
 				'id'     => '@wordpress/connectors',
@@ -27,5 +27,5 @@ function enqueue_connector_module(): void {
 		],
 		'1.0.0'
 	);
-	wp_enqueue_script_module( 'ai-services-connector' );
+	wp_enqueue_script_module( 'ai-provider-for-any-compatible-endpoint' );
 }

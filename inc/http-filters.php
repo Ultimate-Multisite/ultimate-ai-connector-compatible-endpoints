@@ -1,15 +1,15 @@
 <?php
 /**
- * HTTP filters for the AI Services Connector.
+ * HTTP filters for the AI Provider for Any Compatible Endpoint plugin.
  *
  * Handles timeout extension, non-standard port support, and localhost access.
  *
- * @package AiServicesConnector
+ * @package AiProviderCompatibleEndpoint
  */
 
 declare(strict_types=1);
 
-namespace AiServicesConnector;
+namespace AiProviderCompatibleEndpoint;
 
 /**
  * Increases the HTTP timeout for requests to the configured endpoint.
@@ -22,7 +22,7 @@ namespace AiServicesConnector;
  * @return array Modified arguments.
  */
 function increase_timeout( array $parsed_args, string $url ): array {
-	$endpoint_url = get_option( 'ai_services_endpoint_url', '' );
+	$endpoint_url = get_option( 'ai_provider_endpoint_url', '' );
 	if ( empty( $endpoint_url ) ) {
 		return $parsed_args;
 	}
@@ -31,7 +31,7 @@ function increase_timeout( array $parsed_args, string $url ): array {
 	$request_host  = wp_parse_url( $url, PHP_URL_HOST );
 
 	if ( $endpoint_host && $request_host && $endpoint_host === $request_host ) {
-		$timeout = (int) get_option( 'ai_services_timeout', 360 );
+		$timeout = (int) get_option( 'ai_provider_timeout', 360 );
 		$parsed_args['timeout'] = max( (float) ( $parsed_args['timeout'] ?? 30 ), (float) $timeout );
 	}
 
@@ -48,7 +48,7 @@ function increase_timeout( array $parsed_args, string $url ): array {
  * @return int[] Modified allowed ports.
  */
 function allow_endpoint_port( array $ports ): array {
-	$endpoint_url = get_option( 'ai_services_endpoint_url', '' );
+	$endpoint_url = get_option( 'ai_provider_endpoint_url', '' );
 	if ( empty( $endpoint_url ) ) {
 		return $ports;
 	}
@@ -79,7 +79,7 @@ function allow_endpoint_host( bool $is_external, string $host ): bool {
 		return $is_external;
 	}
 
-	$endpoint_url = get_option( 'ai_services_endpoint_url', '' );
+	$endpoint_url = get_option( 'ai_provider_endpoint_url', '' );
 	if ( empty( $endpoint_url ) ) {
 		return $is_external;
 	}
