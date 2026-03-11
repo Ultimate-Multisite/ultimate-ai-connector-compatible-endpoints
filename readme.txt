@@ -1,6 +1,6 @@
 === AI Provider for Any Compatible Endpoint ===
-Contributors: developer-starter
-Tags: ai, ollama, llm, connectors, local-ai, lm-studio
+Contributors: superdav42
+Tags: ai, ollama, llm, connectors, local-ai
 Requires at least: 6.9
 Tested up to: 7.0
 Stable tag: 1.0.0

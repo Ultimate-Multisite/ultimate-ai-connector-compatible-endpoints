@@ -7,7 +7,7 @@
  * Requires PHP: 7.4
  * Version: 1.0.0
  * Author: Ultimate Multisite Community
- * Author URI: https://developer.developer.developer
+ * Author URI: https://ultimatemultisite.com
  * License: GPL-2.0-or-later
  * License URI: https://spdx.org/licenses/GPL-2.0-or-later.html
  * Text Domain: ai-provider-for-any-compatible-endpoint
