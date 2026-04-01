@@ -5,3 +5,4 @@ vendor/
 .wp-env.override.json
 cypress/screenshots/
 cypress/videos/
+.beads/
