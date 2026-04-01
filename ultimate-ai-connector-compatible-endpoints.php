@@ -4,7 +4,7 @@
  * Description: Registers an AI Client provider for Ollama, LM Studio, or any AI endpoint using the standard chat completions API format.
  * Requires at least: 6.9
  * Requires PHP: 7.4
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Ultimate Multisite Community
  * Author URI: https://ultimatemultisite.com
  * License: GPL-2.0-or-later
@@ -20,6 +20,8 @@ namespace UltimateAiConnectorCompatibleEndpoints;
 if ( ! defined( 'ABSPATH' ) ) {
 	return;
 }
+
+define( 'ULTIMATE_AI_CONNECTOR_COMPATIBLE_ENDPOINTS_VERSION', '1.1.0' );
 
 // ---------------------------------------------------------------------------
 // Load function files (no SDK dependency).

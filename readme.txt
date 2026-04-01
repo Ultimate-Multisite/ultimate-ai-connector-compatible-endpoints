@@ -3,7 +3,7 @@ Contributors: superdav42
 Tags: ai, ollama, llm, connectors, local-ai
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,6 +73,14 @@ Yes, but you must also install the [AI Experiments](https://wordpress.org/plugin
 Yes. WordPress 7.0 ships the AI Client SDK in core, so this connector plugin works on its own. You only need the AI Experiments plugin if you want the experimental AI features it provides (excerpt generation, summarization, etc.).
 
 == Changelog ==
+
+= 1.1.0 - Released on 2026-04-01 =
+
+* Improved: Renamed plugin to "Ultimate AI Connector for Compatible Endpoints" for clarity and trademark compliance.
+* Fix: Resolved namespace declaration order that could cause fatal errors on activation.
+* Fix: Corrected CI failures related to PHP 8.2 compatibility and SDK availability guard.
+* Fix: Corrected plugin slug references in E2E tests.
+* Improved: Added PHPUnit, Cypress E2E, and wp-env test infrastructure with GitHub Actions CI.
 
 = 1.0.0 =
 
