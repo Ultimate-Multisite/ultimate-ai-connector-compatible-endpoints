@@ -5,12 +5,11 @@
  * @package UltimateAiConnectorCompatibleEndpoints
  */
 
+namespace UltimateAiConnectorCompatibleEndpoints;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
-
-namespace UltimateAiConnectorCompatibleEndpoints;
 
 /**
  * Registers a REST route that proxies /models from the configured endpoint.

@@ -5,12 +5,11 @@
  * @package UltimateAiConnectorCompatibleEndpoints
  */
 
+namespace UltimateAiConnectorCompatibleEndpoints;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
-
-namespace UltimateAiConnectorCompatibleEndpoints;
 
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\DTO\Response;

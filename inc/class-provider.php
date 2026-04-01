@@ -5,12 +5,11 @@
  * @package UltimateAiConnectorCompatibleEndpoints
  */
 
+namespace UltimateAiConnectorCompatibleEndpoints;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
-
-namespace UltimateAiConnectorCompatibleEndpoints;
 
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;
 use WordPress\AiClient\Providers\ApiBasedImplementation\ListModelsApiBasedProviderAvailability;

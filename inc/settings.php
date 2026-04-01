@@ -5,12 +5,11 @@
  * @package UltimateAiConnectorCompatibleEndpoints
  */
 
+namespace UltimateAiConnectorCompatibleEndpoints;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
-
-namespace UltimateAiConnectorCompatibleEndpoints;
 
 /**
  * Registers the plugin settings for the REST API and admin.

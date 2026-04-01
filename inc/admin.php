@@ -5,12 +5,11 @@
  * @package UltimateAiConnectorCompatibleEndpoints
  */
 
+namespace UltimateAiConnectorCompatibleEndpoints;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
-
-namespace UltimateAiConnectorCompatibleEndpoints;
 
 /**
  * Enqueues the connector script module on the Connectors admin page.
