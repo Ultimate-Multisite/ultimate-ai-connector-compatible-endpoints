@@ -8,8 +8,19 @@
  * Run: npx cypress run --spec tests/e2e/plugin-activation.cy.js
  */
 
-// wp-env mounts the plugin using the repo directory name, not the plugin slug.
-const PLUGIN_SLUG = 'ai-provider-for-any-compatible-endpoint';
+// The plugin name as shown in the WordPress plugins list.
+const PLUGIN_NAME = 'Ultimate AI Connector for Compatible Endpoints';
+
+/**
+ * Find the plugin row by its visible name in the plugins table.
+ *
+ * WordPress generates data-slug from the plugin directory name, which
+ * varies between wp-env (repo directory) and production installs. Using
+ * the plugin name text is more reliable across environments.
+ */
+function getPluginRow() {
+	return cy.contains( '#the-list tr', PLUGIN_NAME );
+}
 
 describe( 'Plugin Activation', () => {
 	beforeEach( () => {
@@ -21,7 +32,7 @@ describe( 'Plugin Activation', () => {
 
 		// The plugin row should exist and be marked active.
 		// wp-env activates plugins listed in .wp-env.json automatically.
-		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
+		getPluginRow()
 			.should( 'exist' )
 			.and( 'have.class', 'active' );
 	} );
@@ -57,21 +68,21 @@ describe( 'Plugin Activation', () => {
 		cy.visit( '/wp-admin/plugins.php' );
 
 		// Deactivate the plugin.
-		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
+		getPluginRow()
 			.find( '.deactivate a' )
 			.click();
 
 		// Verify it is now inactive.
-		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
+		getPluginRow()
 			.should( 'have.class', 'inactive' );
 
 		// Reactivate the plugin.
-		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
+		getPluginRow()
 			.find( '.activate a' )
 			.click();
 
 		// Verify it is active again with no errors.
-		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
+		getPluginRow()
 			.should( 'have.class', 'active' );
 
 		// No fatal errors after reactivation.
