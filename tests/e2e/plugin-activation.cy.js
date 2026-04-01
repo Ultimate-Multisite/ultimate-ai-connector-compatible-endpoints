@@ -8,6 +8,9 @@
  * Run: npx cypress run --spec tests/e2e/plugin-activation.cy.js
  */
 
+// wp-env mounts the plugin using the repo directory name, not the plugin slug.
+const PLUGIN_SLUG = 'ai-provider-for-any-compatible-endpoint';
+
 describe( 'Plugin Activation', () => {
 	beforeEach( () => {
 		cy.wpLogin();
@@ -18,7 +21,7 @@ describe( 'Plugin Activation', () => {
 
 		// The plugin row should exist and be marked active.
 		// wp-env activates plugins listed in .wp-env.json automatically.
-		cy.get( '[data-slug="ultimate-ai-connector-compatible-endpoints"]' )
+		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
 			.should( 'exist' )
 			.and( 'have.class', 'active' );
 	} );
@@ -54,21 +57,21 @@ describe( 'Plugin Activation', () => {
 		cy.visit( '/wp-admin/plugins.php' );
 
 		// Deactivate the plugin.
-		cy.get( '[data-slug="ultimate-ai-connector-compatible-endpoints"]' )
+		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
 			.find( '.deactivate a' )
 			.click();
 
 		// Verify it is now inactive.
-		cy.get( '[data-slug="ultimate-ai-connector-compatible-endpoints"]' )
+		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
 			.should( 'have.class', 'inactive' );
 
 		// Reactivate the plugin.
-		cy.get( '[data-slug="ultimate-ai-connector-compatible-endpoints"]' )
+		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
 			.find( '.activate a' )
 			.click();
 
 		// Verify it is active again with no errors.
-		cy.get( '[data-slug="ultimate-ai-connector-compatible-endpoints"]' )
+		cy.get( `[data-slug="${ PLUGIN_SLUG }"]` )
 			.should( 'have.class', 'active' );
 
 		// No fatal errors after reactivation.
