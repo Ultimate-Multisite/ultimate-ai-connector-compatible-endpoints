@@ -115,3 +115,43 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-to-wporg:
+    name: Deploy to WordPress.org
+    runs-on: ubuntu-latest
+    needs: build-and-release
+    if: github.repository == 'Ultimate-Multisite/ai-provider-for-any-compatible-endpoint'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, intl
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Deploy to WordPress.org SVN
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        with:
+          generate-zip: false
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: ${{ env.PLUGIN_SLUG }}
