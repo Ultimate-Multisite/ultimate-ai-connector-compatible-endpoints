@@ -9,13 +9,13 @@ on:
 
 jobs:
   phpunit:
-    name: PHPUnit (WP ${{ matrix.wp }})
+    name: PHPUnit (WP ${{ matrix.wp == 'nightly' && '7.0-nightly' || matrix.wp }})
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        wp: ['7.0']
+        wp: ['nightly']
 
     services:
       mariadb:
