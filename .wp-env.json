@@ -1,5 +1,5 @@
 {
-	"core": "WordPress/WordPress#6.9",
+	"core": "WordPress/WordPress#7.0-branch",
 	"phpVersion": "8.2",
 	"plugins": [
 		"."
@@ -12,7 +12,7 @@
 	},
 	"env": {
 		"tests": {
-			"core": "WordPress/WordPress#6.9",
+			"core": "WordPress/WordPress#7.0-branch",
 			"phpVersion": "8.2",
 			"config": {
 				"WP_DEBUG": true,

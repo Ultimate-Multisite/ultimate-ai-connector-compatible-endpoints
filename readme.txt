@@ -1,7 +1,7 @@
 === Ultimate AI Connector for Compatible Endpoints ===
 Contributors: superdav42
 Tags: ai, connector, ollama, llm, local-ai
-Requires at least: 6.9
+Requires at least: 7.0
 Tested up to: 7.0
 Stable tag: 1.1.0
 Requires PHP: 7.4
@@ -24,10 +24,9 @@ This plugin extends the WordPress AI Client to support **any AI service or serve
 * **text-generation-webui** - Popular web UI with API server mode.
 * **Any compatible endpoint** - Works with any server implementing the standard format.
 
-**Requirements by WordPress version:**
+**Requirements:**
 
 * **WordPress 7.0+** - The AI Client SDK is included in core. This plugin works on its own without any additional dependencies.
-* **WordPress 6.9** - The AI Client SDK is not in core. You must also install the [AI Experiments](https://wordpress.org/plugins/ai/) plugin, which bundles the SDK.
 
 **Why it matters:**
 
@@ -46,9 +45,8 @@ The plugin also handles practical concerns like extended HTTP timeouts for slow 
 
 1. Upload the plugin files to `/wp-content/plugins/ultimate-ai-connector-compatible-endpoints/`.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
-3. **WordPress 6.9 only:** Make sure the [AI Experiments](https://wordpress.org/plugins/ai/) plugin is installed and active. It provides the AI Client SDK that this plugin requires.
-4. Go to **Settings > Connectors** and configure the connector.
-5. Optionally enter an API key if your endpoint requires one.
+3. Go to **Settings > Connectors** and configure the connector.
+4. Optionally enter an API key if your endpoint requires one.
 
 == Frequently Asked Questions ==
 
@@ -63,10 +61,6 @@ It depends on your endpoint. Local servers like Ollama and LM Studio typically d
 = What models will be available? =
 
 The plugin automatically queries your endpoint's `/models` resource and registers every model it finds. Whatever models your server offers will appear in the WordPress AI Client.
-
-= Does this work with WordPress 6.9? =
-
-Yes, but you must also install the [AI Experiments](https://wordpress.org/plugins/ai/) plugin, which bundles the AI Client SDK. On WordPress 7.0 and later, the SDK is built into core and no additional plugin is needed.
 
 = Does this work on WordPress 7.0 without the AI Experiments plugin? =
 

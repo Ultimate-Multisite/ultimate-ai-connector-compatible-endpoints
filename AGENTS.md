@@ -61,7 +61,7 @@ Config: `.wp-env.json`. Override ports: `.wp-env.override.json` (gitignored).
 
 ### Manual testing
 
-1. Ensure WordPress 6.9+ with AI Client SDK is active
+1. Ensure WordPress 7.0+ with AI Client SDK is active
 2. Activate the plugin
 3. Navigate to Settings → Connectors
 4. Configure an endpoint (e.g., `http://localhost:11434/v1` for Ollama)

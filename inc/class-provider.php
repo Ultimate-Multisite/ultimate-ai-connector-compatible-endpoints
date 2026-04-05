@@ -72,7 +72,8 @@ class CompatibleEndpointProvider extends AbstractApiProvider {
 			'Compatible Endpoint',
 			ProviderTypeEnum::server(),
 			null,
-			RequestAuthenticationMethod::apiKey()
+			RequestAuthenticationMethod::apiKey(),
+			__( 'Connect to Ollama, LM Studio, or any AI endpoint using the standard chat completions API format.', 'ultimate-ai-connector-compatible-endpoints' )
 		);
 	}
 

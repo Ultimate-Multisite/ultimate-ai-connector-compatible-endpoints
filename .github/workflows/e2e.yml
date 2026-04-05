@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   e2e:
-    name: Cypress E2E (WP 6.9)
+    name: Cypress E2E (WP 7.0)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

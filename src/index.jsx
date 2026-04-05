@@ -4,6 +4,8 @@
  * Registers a card on Settings > Connectors that lets users configure
  * the Endpoint URL, API Key, and Default Model from one place.
  *
+ * Compatible with WordPress 7.0+ (Script Modules API).
+ *
  * @package UltimateAiConnectorCompatibleEndpoints
  */
 
@@ -396,7 +398,9 @@ function CompatibleEndpointConnectorCard( { slug, label, description } ) {
 }
 
 // Register the connector card.
-registerConnector( 'ultimate-ai-connector-compatible-endpoints/connector', {
+// The slug matches the provider ID used in the PHP AI Client registry so that
+// this JS registration overrides the auto-discovered entry in WP 7.0+.
+registerConnector( 'ultimate-ai-connector-compatible-endpoints', {
 	label: __( 'Compatible Endpoint' ),
 	description: __(
 		'Connect to Ollama, LM Studio, or any AI endpoint using the standard chat completions API format.'
