@@ -52,7 +52,6 @@ if ( class_exists( 'WordPress\\AiClient\\Providers\\ApiBasedImplementation\\Abst
 add_action( 'admin_init', __NAMESPACE__ . '\\register_settings' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\\register_settings' );
 
-// Connectors page.
 add_action( 'options-connectors-wp-admin_init', __NAMESPACE__ . '\\enqueue_connector_module' );
 
 // REST API.
