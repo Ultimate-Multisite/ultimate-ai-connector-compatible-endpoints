@@ -3,7 +3,7 @@ Contributors: superdav42
 Tags: ai, connector, ollama, llm, local-ai
 Requires at least: 7.0
 Tested up to: 7.0
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -72,6 +72,10 @@ Yes. WordPress 7.0 ships the AI Client SDK in core, so this connector plugin wor
 2. Model selection in the WordPress AI Client — all models from your endpoint appear automatically.
 
 == Changelog ==
+
+= 1.1.1 - Released on 2026-04-07 =
+
+* Fix: re-assert our `registerConnector()` call across multiple ticks (microtask + 0/50/250/1000 ms) so the WP core `registerDefaultConnectors()` auto-register can't clobber the custom card with the generic API-key UI. The two scripts can run in either order depending on dynamic-import resolution; this guarantees we end up last. The proper upstream fix is in https://github.com/WordPress/gutenberg/pull/77116 — once that ships in a Gutenberg release, this workaround can be removed.
 
 = 1.1.0 - Released on 2026-04-01 =
 

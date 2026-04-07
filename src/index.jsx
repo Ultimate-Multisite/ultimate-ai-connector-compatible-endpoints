@@ -400,10 +400,31 @@ function CompatibleEndpointConnectorCard( { slug, label, description } ) {
 // Register the connector card.
 // The slug matches the provider ID used in the PHP AI Client registry so that
 // this JS registration overrides the auto-discovered entry in WP 7.0+.
-registerConnector( 'ultimate-ai-connector-compatible-endpoints', {
+const SLUG = 'ultimate-ai-connector-compatible-endpoints';
+const CONFIG = {
 	label: __( 'Compatible Endpoint' ),
 	description: __(
 		'Connect to Ollama, LM Studio, or any AI endpoint using the standard chat completions API format.'
 	),
 	render: CompatibleEndpointConnectorCard,
-} );
+};
+
+// WP core's `routes/connectors-home/content` module runs
+// `registerDefaultConnectors()` from inside an async dynamic import. By the
+// time it executes, our top-level registerConnector() has already populated
+// the store — and the store reducer spreads new config over existing
+// entries, so the default's `args.render = ApiKeyConnector` overwrites our
+// custom render. The fix in WordPress/gutenberg#77116 will solve this in
+// core, but until that lands and ships we re-assert our registration on
+// multiple ticks (sync + microtask + setTimeout 0/50/250/1000ms) to
+// guarantee we end up last regardless of dynamic-import resolution order.
+function registerOurs() {
+	registerConnector( SLUG, CONFIG );
+}
+
+registerOurs();
+Promise.resolve().then( registerOurs );
+setTimeout( registerOurs, 0 );
+setTimeout( registerOurs, 50 );
+setTimeout( registerOurs, 250 );
+setTimeout( registerOurs, 1000 );
