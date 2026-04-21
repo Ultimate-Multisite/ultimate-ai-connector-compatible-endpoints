@@ -6,3 +6,4 @@ vendor/
 cypress/screenshots/
 cypress/videos/
 .beads/
+*.zip
