@@ -65,7 +65,7 @@ function sanitize_providers_list( $value ): array {
 
 	$sanitized = [];
 	foreach ( $value as $provider ) {
-		if ( is_array( $provider ) {
+		if ( is_array( $provider ) ) {
 			$sanitized[] = sanitize_provider_config( $provider );
 		}
 	}
