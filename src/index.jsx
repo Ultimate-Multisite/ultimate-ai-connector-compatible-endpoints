@@ -2,7 +2,7 @@
  * Ultimate AI Connector for Compatible Endpoints — Connectors page integration.
  *
  * Registers a card on Settings > Connectors that lets users configure
- * the Endpoint URL, API Key, and Default Model from one place.
+ * multiple compatible AI endpoints with fallback routing.
  *
  * Compatible with WordPress 7.0+ (Script Modules API).
  *
@@ -23,9 +23,21 @@ const {
 	__experimentalNumberControl: NumberControl,
 	__experimentalHStack: HStack,
 	__experimentalVStack: VStack,
+	__experimentalCard: Card,
+	__experimentalCardBody: CardBody,
+	__experimentalCardHeader: CardHeader,
+	__experimentalCardDivider: CardDivider,
+	CheckboxControl,
 } = wp.components;
 const { __ } = wp.i18n;
 const apiFetch = wp.apiFetch;
+
+/**
+ * Generate a unique ID for a provider.
+ */
+function generateProviderId() {
+	return 'provider_' + Date.now().toString( 36 ) + Math.random().toString( 36 ).substr( 2, 5 );
+}
 
 /**
  * "ANY LLM" text icon used as the connector logo.
@@ -87,35 +99,217 @@ function ConnectedBadge() {
 }
 
 /**
+ * Sortable provider card for the list.
+ */
+function ProviderCard( {
+	provider,
+	isExpanded,
+	onToggle,
+	onUpdate,
+	onRemove,
+	isSaving,
+	saveError,
+	models = [],
+	isLoadingModels,
+} ) {
+	const [ name, setName ] = useState( provider.name || '' );
+	const [ endpointUrl, setEndpointUrl ] = useState( provider.endpoint_url || '' );
+	const [ apiKey, setApiKey ] = useState( provider.api_key || '' );
+	const [ defaultModel, setDefaultModel ] = useState( provider.default_model || '' );
+	const [ timeout, setTimeout ] = useState( provider.timeout ?? 360 );
+	const [ enabled, setEnabled ] = useState( provider.enabled ?? true );
+	const modelsFetchedRef = useRef( '' );
+
+	// Sync with provider prop.
+	useEffect( () => {
+		setName( provider.name || '' );
+		setEndpointUrl( provider.endpoint_url || '' );
+		setApiKey( provider.api_key || '' );
+		setDefaultModel( provider.default_model || '' );
+		setTimeout( provider.timeout ?? 360 );
+		setEnabled( provider.enabled ?? true );
+	}, [ provider ] );
+
+	const modelOptions = [
+		{ label: __( 'Auto-select (SDK chooses)' ), value: '' },
+		...( models || [] ).map( ( m ) => ( {
+			label: m.name || m.id,
+			value: m.id,
+		} ) ),
+	];
+
+	const handleChange = ( key, value ) => {
+		onUpdate( {
+			...provider,
+			[ key ]: value,
+		} );
+	};
+
+	return (
+		<Card size="small">
+			<CardHeader>
+				<HStack expanded={ false }>
+					<DragHandle />
+					<span style={ { flex: 1, fontWeight: 500 } }>
+						{ name || endpointUrl || __( 'New provider' ) }
+					</span>
+					<CheckboxControl
+						label={ __( 'Enabled' ) }
+						checked={ enabled }
+						onChange={ ( value ) => handleChange( 'enabled', value ) }
+						disabled={ isSaving }
+					/>
+					<Button
+						variant="tertiary"
+						size="small"
+						onClick={ onToggle }
+					>
+						{ isExpanded ? __( 'Collapse' ) : __( 'Expand' ) }
+					</Button>
+				</HStack>
+			</CardHeader>
+			{ isExpanded && (
+				<>
+					<CardDivider />
+					<CardBody>
+						<VStack spacing={ 3 }>
+							<TextControl
+								__nextHasNoMarginBottom
+								label={ __( 'Name' ) }
+								value={ name }
+								onChange={ ( value ) => {
+									setName( value );
+									handleChange( 'name', value );
+								} }
+								placeholder={ __( 'My Ollama Server' ) }
+								disabled={ isSaving }
+							/>
+							<TextControl
+								__nextHasNoMarginBottom
+								label={ __( 'Endpoint URL' ) }
+								value={ endpointUrl }
+								onChange={ ( value ) => {
+									setEndpointUrl( value );
+									handleChange( 'endpoint_url', value );
+								} }
+								placeholder="http://localhost:11434/v1"
+								disabled={ isSaving }
+								help={ __(
+									'Base URL (e.g. Ollama, LM Studio, OpenRouter)'
+								) }
+							/>
+							<TextControl
+								__nextHasNoMarginBottom
+								label={ __( 'API Key' ) }
+								type="password"
+								value={ apiKey }
+								onChange={ ( value ) => {
+									setApiKey( value );
+									handleChange( 'api_key', value );
+								} }
+								placeholder="sk-..."
+								disabled={ isSaving }
+								help={ __(
+									'Optional. Leave blank for servers without auth.'
+								) }
+							/>
+							{ isLoadingModels ? (
+								<HStack spacing={ 2 } expanded={ false }>
+									<Spinner />
+									<span>{ __( 'Loading models\u2026' ) }</span>
+								</HStack>
+							) : (
+								<SelectControl
+									__nextHasNoMarginBottom
+									label={ __( 'Default Model' ) }
+									value={ defaultModel }
+									options={ modelOptions }
+									onChange={ ( value ) => {
+										setDefaultModel( value );
+										handleChange( 'default_model', value );
+									} }
+									disabled={ isSaving }
+								/>
+							) }
+							<NumberControl
+								__next40pxDefaultSize
+								label={ __( 'Timeout (seconds)' ) }
+								value={ timeout }
+								onChange={ ( value ) => {
+									setTimeout( parseInt( value, 10 ) || 360 );
+									handleChange( 'timeout', parseInt( value, 10 ) || 360 );
+								} }
+								min={ 10 }
+								max={ 600 }
+								step={ 10 }
+								disabled={ isSaving }
+							/>
+							{ saveError && (
+								<span style={ { color: '#cc1818' } }>
+									{ saveError }
+								</span>
+							) }
+							<Button
+								variant="link"
+								isDestructive
+								onClick={ onRemove }
+								disabled={ isSaving }
+							>
+								{ __( 'Remove this provider' ) }
+							</Button>
+						</VStack>
+					</CardBody>
+				</>
+			) }
+		</Card>
+	);
+}
+
+/**
  * Main connector card component rendered on the Connectors page.
  */
 function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
-	const [ endpointUrl, setEndpointUrl ] = useState( '' );
-	const [ apiKey, setApiKey ] = useState( '' );
-	const [ defaultModel, setDefaultModel ] = useState( '' );
-	const [ models, setModels ] = useState( [] );
-	const [ isLoadingModels, setIsLoadingModels ] = useState( false );
+	const [ providers, setProviders ] = useState( [] );
+	const [ providerOrder, setProviderOrder ] = useState( [] );
 	const [ isExpanded, setIsExpanded ] = useState( false );
 	const [ isSaving, setIsSaving ] = useState( false );
-	const [ timeout, setTimeout ] = useState( 360 );
-	const [ showAdvanced, setShowAdvanced ] = useState( false );
 	const [ isLoading, setIsLoading ] = useState( true );
 	const [ saveError, setSaveError ] = useState( null );
-	const modelsFetchedForUrl = useRef( '' );
+	const [ expandedProviders, setExpandedProviders ] = useState( {} );
+	const [ modelsCache, setModelsCache ] = useState( {} );
 
-	const isConnected = endpointUrl !== '';
+	const hasProviders = providers.length > 0;
 
+	/**
+	 * Fetch providers from settings.
+	 */
 	const fetchSettings = useCallback( async () => {
 		try {
 			const settings = await apiFetch( {
-				path: '/wp/v2/settings?_fields=ultimate_ai_connector_endpoint_url,ultimate_ai_connector_api_key,ultimate_ai_connector_default_model,ultimate_ai_connector_timeout',
+				path: '/wp/v2/settings?_fields=ultimate_ai_connector_providers,ultimate_ai_connector_provider_order',
 			} );
-			setEndpointUrl( settings.ultimate_ai_connector_endpoint_url || '' );
-			setApiKey( settings.ultimate_ai_connector_api_key || '' );
-			setDefaultModel( settings.ultimate_ai_connector_default_model || '' );
-			setTimeout( settings.ultimate_ai_connector_timeout ?? 360 );
+			const loadedProviders = settings.ultimate_ai_connector_providers || [];
+			const loadedOrder = settings.ultimate_ai_connector_provider_order || [];
+
+			// Handle legacy single-provider config for migration.
+			const legacyUrl = settings.ultimate_ai_connector_endpoint_url;
+			if ( ! loadedProviders.length && legacyUrl ) {
+				setProviders( [ {
+					id: generateProviderId(),
+					name: 'Default',
+					endpoint_url: legacyUrl,
+					api_key: settings.ultimate_ai_connector_api_key || '',
+					default_model: settings.ultimate_ai_connector_default_model || '',
+					timeout: settings.ultimate_ai_connector_timeout || 360,
+					enabled: true,
+				} ] );
+			} else {
+				setProviders( loadedProviders );
+			}
+
+			setProviderOrder( loadedOrder );
 		} catch {
-			// Silently fail — fields will stay empty.
+			// Silently fail.
 		} finally {
 			setIsLoading( false );
 		}
@@ -126,62 +320,114 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 	}, [ fetchSettings ] );
 
 	/**
-	 * Fetch available models from the proxy REST endpoint.
+	 * Fetch models for an endpoint URL.
 	 */
-	const fetchModels = useCallback( async () => {
-		if ( ! endpointUrl ) {
-			setModels( [] );
+	const fetchModelsForUrl = useCallback( async ( url, key ) => {
+		if ( ! url || ! key ) {
 			return;
 		}
-		// Don't re-fetch if we already fetched for this URL.
-		if ( modelsFetchedForUrl.current === endpointUrl ) {
+		const cacheKey = 'models_' + key;
+		if ( modelsCache[ cacheKey ] ) {
 			return;
 		}
-		setIsLoadingModels( true );
 		try {
-			const params = new URLSearchParams( {
-				endpoint_url: endpointUrl,
-			} );
-			if ( apiKey ) {
-				params.set( 'api_key', apiKey );
-			}
+			const params = new URLSearchParams( { endpoint_url: url } );
 			const result = await apiFetch( {
 				path: '/ultimate-ai-connector-compatible-endpoints/v1/models?' + params.toString(),
 			} );
-			setModels( Array.isArray( result ) ? result : [] );
-			modelsFetchedForUrl.current = endpointUrl;
+			setModelsCache( ( prev ) => ( {
+				...prev,
+				[ cacheKey ]: result,
+			} ) );
 		} catch {
-			setModels( [] );
-		} finally {
-			setIsLoadingModels( false );
+			// Ignore errors.
 		}
-	}, [ endpointUrl, apiKey ] );
+	}, [ modelsCache ] );
 
-	// Fetch models when the card is expanded and we have an endpoint URL.
-	useEffect( () => {
-		if ( isExpanded && endpointUrl ) {
-			fetchModels();
+	/**
+	 * Update a provider in the list.
+	 */
+	const updateProvider = useCallback( ( index, updatedProvider ) => {
+		setProviders( ( prev ) => {
+			const next = [ ...prev ];
+			next[ index ] = {
+				...updatedProvider,
+				id: updatedProvider.id || generateProviderId(),
+			};
+			return next;
+		} );
+
+		// Fetch models if endpoint changed.
+		if ( updatedProvider.endpoint_url ) {
+			fetchModelsForUrl( updatedProvider.endpoint_url, updatedProvider.id );
 		}
-	}, [ isExpanded, endpointUrl, fetchModels ] );
+	}, [ fetchModelsForUrl ] );
 
+	/**
+	 * Remove a provider.
+	 */
+	const removeProvider = useCallback( ( index ) => {
+		setProviders( ( prev ) => prev.filter( ( _, i ) => i !== index ) );
+		setExpandedProviders( ( prev ) => {
+			const next = { ...prev };
+			delete next[ index ];
+			return next;
+		} );
+	}, [] );
+
+	/**
+	 * Add a new provider.
+	 */
+	const addProvider = useCallback( () => {
+		const newProvider = {
+			id: generateProviderId(),
+			name: '',
+			endpoint_url: '',
+			api_key: '',
+			default_model: '',
+			timeout: 360,
+			enabled: true,
+		};
+		setProviders( ( prev ) => [ ...prev, newProvider ] );
+	}, [] );
+
+	/**
+	 * Move a provider up/down in the list.
+	 */
+	const moveProvider = useCallback( ( fromIndex, direction ) => {
+		setProviders( ( prev ) => {
+			const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+			if ( toIndex < 0 || toIndex >= prev.length ) {
+				return prev;
+			}
+			const next = prev.slice();
+			const temp = next[ fromIndex ];
+			next[ fromIndex ] = next[ toIndex ];
+			next[ toIndex ] = temp;
+			return next;
+		} );
+	}, [] );
+
+	/**
+	 * Save all providers.
+	 */
 	const handleSave = async () => {
 		setSaveError( null );
 		setIsSaving( true );
 		try {
-			const result = await apiFetch( {
+			// Build order array from provider IDs.
+			const order = providers
+				.filter( ( p ) => p.enabled )
+				.map( ( p ) => p.id );
+
+			await apiFetch( {
 				method: 'POST',
 				path: '/wp/v2/settings',
 				data: {
-					ultimate_ai_connector_endpoint_url: endpointUrl,
-					ultimate_ai_connector_api_key: apiKey,
-					ultimate_ai_connector_default_model: defaultModel,
-					ultimate_ai_connector_timeout: parseInt( timeout, 10 ) || 360,
+					ultimate_ai_connector_providers: providers,
+					ultimate_ai_connector_provider_order: order,
 				},
 			} );
-			setEndpointUrl( result.ultimate_ai_connector_endpoint_url || '' );
-			setApiKey( result.ultimate_ai_connector_api_key || '' );
-			setDefaultModel( result.ultimate_ai_connector_default_model || '' );
-			setTimeout( result.ultimate_ai_connector_timeout ?? 360 );
 			setIsExpanded( false );
 		} catch ( error ) {
 			setSaveError(
@@ -194,41 +440,12 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 		}
 	};
 
-	const handleRemove = async () => {
-		setSaveError( null );
-		setIsSaving( true );
-		try {
-			await apiFetch( {
-				method: 'POST',
-				path: '/wp/v2/settings',
-				data: {
-					ultimate_ai_connector_endpoint_url: '',
-					ultimate_ai_connector_api_key: '',
-					ultimate_ai_connector_default_model: '',
-					ultimate_ai_connector_timeout: 360,
-				},
-			} );
-			setEndpointUrl( '' );
-			setApiKey( '' );
-			setDefaultModel( '' );
-			setTimeout( 360 );
-			setModels( [] );
-			modelsFetchedForUrl.current = '';
-			setShowAdvanced( false );
-			setIsExpanded( false );
-		} catch ( error ) {
-			setSaveError(
-				error instanceof Error
-					? error.message
-					: __( 'Failed to remove settings.' )
-			);
-		} finally {
-			setIsSaving( false );
-		}
-	};
-
-	const handleButtonClick = () => {
-		setIsExpanded( ! isExpanded );
+	/**
+	 * Cancel and reload.
+	 */
+	const handleCancel = async () => {
+		await fetchSettings();
+		setIsExpanded( false );
 		setSaveError( null );
 	};
 
@@ -239,149 +456,79 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 		if ( isExpanded ) {
 			return __( 'Cancel' );
 		}
-		return isConnected ? __( 'Edit' ) : __( 'Set up' );
+		return hasProviders ? __( 'Manage' ) : __( 'Set up' );
 	};
 
-	const modelOptions = [
-		{ label: __( 'Auto-select (SDK chooses)' ), value: '' },
-		...models.map( ( m ) => ( {
-			label: m.name || m.id,
-			value: m.id,
-		} ) ),
-	];
-
-	// Action area: badge + toggle button.
+	// Action area: badge + button.
 	const actionArea = (
 		<HStack spacing={ 3 } expanded={ false }>
-			{ isConnected && ! isExpanded && <ConnectedBadge /> }
+			{ hasProviders && ! isExpanded && <ConnectedBadge /> }
 			<Button
-				variant={
-					isExpanded || isConnected ? 'tertiary' : 'secondary'
-				}
-				size={
-					isExpanded || isConnected ? undefined : 'compact'
-				}
-				onClick={ handleButtonClick }
+				variant={ isExpanded || hasProviders ? 'tertiary' : 'secondary' }
+				size={ isExpanded || hasProviders ? undefined : 'compact' }
+				onClick={ () => setIsExpanded( ! isExpanded ) }
 				disabled={ isLoading }
-				aria-expanded={ isExpanded }
 			>
 				{ getButtonLabel() }
 			</Button>
 		</HStack>
 	);
 
-	// Expanded settings form.
+	// Settings form.
 	const settingsForm = isExpanded ? (
-		<VStack
-			spacing={ 4 }
-			className="connector-settings"
-			style={
-				isConnected
-					? { '--wp-components-color-background': '#f0f0f0' }
-					: undefined
-			}
-		>
-			<TextControl
-				__nextHasNoMarginBottom
-				__next40pxDefaultSize
-				label={ __( 'Endpoint URL' ) }
-				value={ endpointUrl }
-				onChange={ ( value ) => {
-					setSaveError( null );
-					setEndpointUrl( value );
-					// Reset models when URL changes so we re-fetch.
-					modelsFetchedForUrl.current = '';
-					setModels( [] );
-				} }
-				placeholder="http://localhost:11434/v1"
-				disabled={ isSaving }
-				help={
-					saveError
-						? <span style={ { color: '#cc1818' } }>{ saveError }</span>
-						: __( 'Base URL for the AI endpoint (e.g. Ollama, LM Studio, OpenRouter).' )
-				}
-			/>
-			<TextControl
-				__nextHasNoMarginBottom
-				__next40pxDefaultSize
-				label={ __( 'API Key' ) }
-				type="password"
-				value={ apiKey }
-				onChange={ ( value ) => {
-					setSaveError( null );
-					setApiKey( value );
-				} }
-				placeholder="sk-..."
-				disabled={ isSaving }
-				help={ __(
-					'Optional. Leave blank for servers that do not require authentication.'
+		<VStack spacing={ 4 } className="connector-settings">
+			<p style={ { color: '#555', fontSize: '13px' } }>
+				{ __(
+					'Add multiple providers and drag to reorder. The SDK will try them in order until one succeeds.'
 				) }
-			/>
-			<div>
-				{ isLoadingModels ? (
-					<HStack spacing={ 2 } expanded={ false }>
-						<Spinner />
-						<span>{ __( 'Loading models\u2026' ) }</span>
-					</HStack>
-				) : (
-					<SelectControl
-						__nextHasNoMarginBottom
-						__next40pxDefaultSize
-						label={ __( 'Default Model' ) }
-						value={ defaultModel }
-						options={ modelOptions }
-						onChange={ setDefaultModel }
-						disabled={ isSaving }
-						help={ __(
-							'Choose a specific model or let the SDK auto-select.'
-						) }
-					/>
-				) }
-			</div>
-			<Button
-				variant="link"
-				onClick={ () => setShowAdvanced( ! showAdvanced ) }
-				style={ { alignSelf: 'flex-start' } }
-			>
-				{ showAdvanced
-					? __( 'Advanced options \u25B4' )
-					: __( 'Advanced options \u25BE' ) }
-			</Button>
-			{ showAdvanced && (
-				<NumberControl
-					__next40pxDefaultSize
-					label={ __( 'Request Timeout (seconds)' ) }
-					value={ timeout }
-					onChange={ ( value ) => setTimeout( parseInt( value, 10 ) || 360 ) }
-					min={ 10 }
-					max={ 600 }
-					step={ 10 }
-					disabled={ isSaving }
-					help={ __(
-						'Maximum time to wait for inference responses. Increase for slow hardware.'
-					) }
+			</p>
+
+			{ providers.map( ( provider, index ) => (
+				<ProviderCard
+					key={ provider.id || index }
+					provider={ provider }
+					isExpanded={ expandedProviders[ index ] || false }
+					onToggle={ () =>
+						setExpandedProviders( ( prev ) => ( {
+							...prev,
+							[ index ]: ! prev[ index ],
+						} ) )
+					}
+					onUpdate={ ( updated ) => updateProvider( index, updated ) }
+					onRemove={ () => removeProvider( index ) }
+					isSaving={ isSaving }
+					saveError={ null }
+					models={ modelsCache[ 'models_' + provider.id ] || [] }
+					isLoadingModels={ false }
 				/>
-			) }
-			{ isConnected && (
+			) ) }
+
+			<HStack expanded={ false }>
 				<Button
-					variant="link"
-					isDestructive
-					onClick={ handleRemove }
+					variant="secondary"
+					onClick={ addProvider }
 					disabled={ isSaving }
 				>
-					{ __( 'Remove connection' ) }
+					+ { __( 'Add provider' ) }
 				</Button>
+			</HStack>
+
+			{ saveError && (
+				<span style={ { color: '#cc1818' } }>{ saveError }</span>
 			) }
+
 			<HStack justify="flex-start">
 				<Button
-					__next40pxDefaultSize
 					variant="primary"
-					disabled={ ! endpointUrl || isSaving }
+					disabled={ ! providers.length || isSaving }
 					accessibleWhenDisabled
 					isBusy={ isSaving }
 					onClick={ handleSave }
 				>
 					{ __( 'Save' ) }
+				</Button>
+				<Button variant="tertiary" onClick={ handleCancel } disabled={ isSaving }>
+					{ __( 'Cancel' ) }
 				</Button>
 			</HStack>
 		</VStack>
