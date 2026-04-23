@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;
-use WordPress\AiClient\Providers\ApiBasedImplementation\ListModelsApiBasedProviderAvailability;
 use WordPress\AiClient\Providers\Contracts\ModelMetadataDirectoryInterface;
 use WordPress\AiClient\Providers\Contracts\ProviderAvailabilityInterface;
 use WordPress\AiClient\Providers\DTO\ProviderMetadata;
@@ -79,11 +78,28 @@ class CompatibleEndpointProvider extends AbstractApiProvider {
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * Returns a configuration-based availability check rather than a live HTTP
+	 * request. Using ListModelsApiBasedProviderAvailability here would fire a
+	 * blocking HTTP request to the /models endpoint on every page load where
+	 * isConfigured() is called (e.g. Connectors settings page, AI feature
+	 * discovery). On sites without a persistent object cache the SDK's internal
+	 * PSR-16 cache is cold on every request, causing 7+ second latency spikes.
+	 *
+	 * Actual endpoint reachability is validated lazily the first time the user
+	 * makes an AI generation request.
 	 */
 	protected static function createProviderAvailability(): ProviderAvailabilityInterface {
-		return new ListModelsApiBasedProviderAvailability(
-			static::modelMetadataDirectory()
-		);
+		return new class implements ProviderAvailabilityInterface {
+			/**
+			 * Checks whether the endpoint URL is configured.
+			 *
+			 * @return bool True when the endpoint URL option is non-empty.
+			 */
+			public function isConfigured(): bool {
+				return ! empty( CompatibleEndpointProvider::$endpointUrl );
+			}
+		};
 	}
 
 	/**
