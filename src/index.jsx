@@ -149,7 +149,19 @@ function ProviderCard( {
 		<Card size="small">
 			<CardHeader>
 				<HStack expanded={ false }>
-					<DragHandle />
+					<span
+						style={ {
+							cursor: 'grab',
+							color: '#888',
+							fontSize: '16px',
+							lineHeight: 1,
+							userSelect: 'none',
+							padding: '0 4px',
+						} }
+						title={ __( 'Drag to reorder' ) }
+					>
+						&#x2630;
+					</span>
 					<span style={ { flex: 1, fontWeight: 500 } }>
 						{ name || endpointUrl || __( 'New provider' ) }
 					</span>
