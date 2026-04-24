@@ -50,8 +50,24 @@ function register_models_route(): void {
  */
 function rest_list_models( \WP_REST_Request $request ) {
 	$endpoint_url = $request->get_param( 'endpoint_url' );
+	$api_key      = $request->get_param( 'api_key' );
+
 	if ( empty( $endpoint_url ) ) {
-		$endpoint_url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
+		// Try multi-provider config first (v2.0.0+).
+		$primary = get_primary_provider();
+		if ( $primary ) {
+			$endpoint_url = $primary['endpoint_url'] ?? '';
+			if ( null === $api_key ) {
+				$api_key = $primary['api_key'] ?? '';
+			}
+		} else {
+			// Fall back to legacy single-provider option.
+			$endpoint_url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
+		}
+	}
+
+	if ( null === $api_key ) {
+		$api_key = get_option( 'ultimate_ai_connector_api_key', '' );
 	}
 
 	if ( empty( $endpoint_url ) ) {
@@ -63,11 +79,6 @@ function rest_list_models( \WP_REST_Request $request ) {
 	}
 
 	$models_url = rtrim( $endpoint_url, '/' ) . '/models';
-
-	$api_key = $request->get_param( 'api_key' );
-	if ( null === $api_key ) {
-		$api_key = get_option( 'ultimate_ai_connector_api_key', '' );
-	}
 
 	$headers = [
 		'Accept' => 'application/json',

@@ -22,8 +22,30 @@ use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCo
 
 /**
  * Lists available models from the configured endpoint's /models resource.
+ *
+ * Accepts an optional endpoint URL so that each dynamic provider can pass its
+ * own URL rather than falling back to the legacy single-provider static.
  */
 class CompatibleEndpointModelDirectory extends AbstractOpenAiCompatibleModelMetadataDirectory {
+
+	/**
+	 * The base URL for this directory instance.
+	 *
+	 * Set via constructor for dynamic multi-provider support; falls back to
+	 * the legacy CompatibleEndpointProvider static when not provided.
+	 *
+	 * @var string
+	 */
+	private string $endpointUrl;
+
+	/**
+	 * @param string $endpointUrl Base URL of the AI endpoint (no trailing slash).
+	 */
+	public function __construct( string $endpointUrl = '' ) {
+		$this->endpointUrl = $endpointUrl !== ''
+			? rtrim( $endpointUrl, '/' )
+			: rtrim( CompatibleEndpointProvider::$endpointUrl, '/' );
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -36,7 +58,7 @@ class CompatibleEndpointModelDirectory extends AbstractOpenAiCompatibleModelMeta
 	): Request {
 		return new Request(
 			$method,
-			CompatibleEndpointProvider::url( $path ),
+			$this->endpointUrl . '/' . ltrim( $path, '/' ),
 			$headers,
 			$data
 		);
@@ -58,7 +80,7 @@ class CompatibleEndpointModelDirectory extends AbstractOpenAiCompatibleModelMeta
 	 * @return array<string, ModelMetadata> Map of model ID to model metadata.
 	 */
 	protected function sendListModelsRequest(): array {
-		$endpoint_url = CompatibleEndpointProvider::$endpointUrl;
+		$endpoint_url = $this->endpointUrl;
 		$cache_key    = 'ult_ai_connector_models_' . md5( $endpoint_url );
 
 		/** @var list<array{id: string, name: string}>|false $cached */

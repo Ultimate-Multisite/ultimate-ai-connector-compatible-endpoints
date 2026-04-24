@@ -23,10 +23,10 @@ const {
 	__experimentalNumberControl: NumberControl,
 	__experimentalHStack: HStack,
 	__experimentalVStack: VStack,
-	__experimentalCard: Card,
-	__experimentalCardBody: CardBody,
-	__experimentalCardHeader: CardHeader,
-	__experimentalCardDivider: CardDivider,
+	Card,
+	CardBody,
+	CardHeader,
+	CardDivider,
 	CheckboxControl,
 } = wp.components;
 const { __ } = wp.i18n;
@@ -100,11 +100,13 @@ function ConnectedBadge() {
 
 /**
  * Sortable provider card for the list.
+ *
+ * Each card owns its own expanded/collapsed state. The parent passes
+ * `initialExpanded` only at mount time; subsequent renders do not reset it.
  */
 function ProviderCard( {
 	provider,
-	isExpanded,
-	onToggle,
+	initialExpanded = false,
 	onUpdate,
 	onRemove,
 	isSaving,
@@ -112,6 +114,7 @@ function ProviderCard( {
 	models = [],
 	isLoadingModels,
 } ) {
+	const [ isExpanded, setIsExpanded ] = useState( initialExpanded );
 	const [ name, setName ] = useState( provider.name || '' );
 	const [ endpointUrl, setEndpointUrl ] = useState( provider.endpoint_url || '' );
 	const [ apiKey, setApiKey ] = useState( provider.api_key || '' );
@@ -149,7 +152,19 @@ function ProviderCard( {
 		<Card size="small">
 			<CardHeader>
 				<HStack expanded={ false }>
-					<DragHandle />
+					<span
+						style={ {
+							cursor: 'grab',
+							color: '#888',
+							fontSize: '16px',
+							lineHeight: 1,
+							userSelect: 'none',
+							padding: '0 4px',
+						} }
+						title={ __( 'Drag to reorder' ) }
+					>
+						&#x2630;
+					</span>
 					<span style={ { flex: 1, fontWeight: 500 } }>
 						{ name || endpointUrl || __( 'New provider' ) }
 					</span>
@@ -162,7 +177,7 @@ function ProviderCard( {
 					<Button
 						variant="tertiary"
 						size="small"
-						onClick={ onToggle }
+						onClick={ () => setIsExpanded( ( v ) => ! v ) }
 					>
 						{ isExpanded ? __( 'Collapse' ) : __( 'Expand' ) }
 					</Button>
@@ -275,7 +290,6 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 	const [ isSaving, setIsSaving ] = useState( false );
 	const [ isLoading, setIsLoading ] = useState( true );
 	const [ saveError, setSaveError ] = useState( null );
-	const [ expandedProviders, setExpandedProviders ] = useState( {} );
 	const [ modelsCache, setModelsCache ] = useState( {} );
 
 	const hasProviders = providers.length > 0;
@@ -387,6 +401,7 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			default_model: '',
 			timeout: 360,
 			enabled: true,
+			_new: true, // signals ProviderCard to start expanded
 		};
 		setProviders( ( prev ) => [ ...prev, newProvider ] );
 	}, [] );
@@ -420,14 +435,17 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 				.filter( ( p ) => p.enabled )
 				.map( ( p ) => p.id );
 
-			await apiFetch( {
-				method: 'POST',
-				path: '/wp/v2/settings',
-				data: {
-					ultimate_ai_connector_providers: providers,
-					ultimate_ai_connector_provider_order: order,
-				},
-			} );
+		// Strip internal-only marker before persisting.
+		const providersToSave = providers.map( ( { _new, ...p } ) => p );
+
+		await apiFetch( {
+			method: 'POST',
+			path: '/wp/v2/settings',
+			data: {
+				ultimate_ai_connector_providers: providersToSave,
+				ultimate_ai_connector_provider_order: order,
+			},
+		} );
 			setIsExpanded( false );
 		} catch ( error ) {
 			setSaveError(
@@ -487,13 +505,7 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 				<ProviderCard
 					key={ provider.id || index }
 					provider={ provider }
-					isExpanded={ expandedProviders[ index ] || false }
-					onToggle={ () =>
-						setExpandedProviders( ( prev ) => ( {
-							...prev,
-							[ index ]: ! prev[ index ],
-						} ) )
-					}
+					initialExpanded={ !! provider._new }
 					onUpdate={ ( updated ) => updateProvider( index, updated ) }
 					onRemove={ () => removeProvider( index ) }
 					isSaving={ isSaving }

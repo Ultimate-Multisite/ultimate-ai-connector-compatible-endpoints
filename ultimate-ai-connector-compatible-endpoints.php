@@ -31,6 +31,7 @@ require_once __DIR__ . '/inc/settings.php';
 require_once __DIR__ . '/inc/admin.php';
 require_once __DIR__ . '/inc/rest-api.php';
 require_once __DIR__ . '/inc/http-filters.php';
+require_once __DIR__ . '/inc/compat-openai-connector.php';
 
 // ---------------------------------------------------------------------------
 // Load SDK-dependent class files only when the AI Client SDK is available.

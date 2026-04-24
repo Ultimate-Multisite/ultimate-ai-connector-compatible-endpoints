@@ -28,23 +28,60 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param string $url         Request URL.
  * @return array Modified arguments.
  */
+/**
+ * Returns all configured endpoint URLs (multi-provider aware).
+ *
+ * @return array<array{url: string, timeout: int}> List of endpoint configs.
+ */
+function get_all_endpoint_configs(): array {
+	$configs   = [];
+	$providers = get_providers();
+
+	if ( ! empty( $providers ) ) {
+		foreach ( $providers as $provider ) {
+			$url = $provider['endpoint_url'] ?? '';
+			if ( ! empty( $url ) && ( $provider['enabled'] ?? true ) ) {
+				$configs[] = [
+					'url'     => $url,
+					'timeout' => (int) ( $provider['timeout'] ?? 360 ),
+				];
+			}
+		}
+		return $configs;
+	}
+
+	// Legacy single-provider fallback.
+	$url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
+	if ( ! empty( $url ) ) {
+		$configs[] = [
+			'url'     => $url,
+			'timeout' => (int) get_option( 'ultimate_ai_connector_timeout', 360 ),
+		];
+	}
+
+	return $configs;
+}
+
 function increase_timeout( array $parsed_args, string $url ): array {
 	// Only extend timeout for chat completions, not model listing or other paths.
 	if ( ! str_contains( $url, '/chat/completions' ) ) {
 		return $parsed_args;
 	}
 
-	$endpoint_url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
-	if ( empty( $endpoint_url ) ) {
+	$request_host = wp_parse_url( $url, PHP_URL_HOST );
+	if ( ! $request_host ) {
 		return $parsed_args;
 	}
 
-	$endpoint_host = wp_parse_url( $endpoint_url, PHP_URL_HOST );
-	$request_host  = wp_parse_url( $url, PHP_URL_HOST );
-
-	if ( $endpoint_host && $request_host && $endpoint_host === $request_host ) {
-		$timeout = (int) get_option( 'ultimate_ai_connector_timeout', 360 );
-		$parsed_args['timeout'] = max( (float) ( $parsed_args['timeout'] ?? 30 ), (float) $timeout );
+	foreach ( get_all_endpoint_configs() as $config ) {
+		$endpoint_host = wp_parse_url( $config['url'], PHP_URL_HOST );
+		if ( $endpoint_host && $endpoint_host === $request_host ) {
+			$parsed_args['timeout'] = max(
+				(float) ( $parsed_args['timeout'] ?? 30 ),
+				(float) $config['timeout']
+			);
+			break;
+		}
 	}
 
 	return $parsed_args;
@@ -60,14 +97,11 @@ function increase_timeout( array $parsed_args, string $url ): array {
  * @return int[] Modified allowed ports.
  */
 function allow_endpoint_port( array $ports ): array {
-	$endpoint_url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
-	if ( empty( $endpoint_url ) ) {
-		return $ports;
-	}
-
-	$parsed = wp_parse_url( $endpoint_url );
-	if ( ! empty( $parsed['port'] ) ) {
-		$ports[] = (int) $parsed['port'];
+	foreach ( get_all_endpoint_configs() as $config ) {
+		$parsed = wp_parse_url( $config['url'] );
+		if ( ! empty( $parsed['port'] ) ) {
+			$ports[] = (int) $parsed['port'];
+		}
 	}
 
 	return array_unique( $ports );
@@ -91,15 +125,11 @@ function allow_endpoint_host( bool $is_external, string $host ): bool {
 		return $is_external;
 	}
 
-	$endpoint_url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
-	if ( empty( $endpoint_url ) ) {
-		return $is_external;
-	}
-
-	$endpoint_host = wp_parse_url( $endpoint_url, PHP_URL_HOST );
-
-	if ( $endpoint_host && $endpoint_host === $host ) {
-		return true;
+	foreach ( get_all_endpoint_configs() as $config ) {
+		$endpoint_host = wp_parse_url( $config['url'], PHP_URL_HOST );
+		if ( $endpoint_host && $endpoint_host === $host ) {
+			return true;
+		}
 	}
 
 	return $is_external;

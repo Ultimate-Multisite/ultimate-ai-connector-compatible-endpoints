@@ -61,6 +61,16 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 	public static int $timeout = 360;
 
 	/**
+	 * SDK provider ID emitted by createProviderMetadata().
+	 *
+	 * For the primary provider this is 'ai-provider-for-any-openai-compatible';
+	 * for subsequent providers it gets a numeric suffix (-2, -3, …).
+	 *
+	 * @var string
+	 */
+	public static string $sdkProviderId = 'ai-provider-for-any-openai-compatible';
+
+	/**
 	 * {@inheritDoc}
 	 */
 	protected static function baseUrl(): string {
@@ -92,7 +102,7 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 	protected static function createProviderMetadata(): ProviderMetadata {
 		$name = static::$providerName ?: 'Compatible Endpoint';
 		return new ProviderMetadata(
-			'ultimate-ai-connector-compatible-endpoints-' . static::$providerId,
+			static::$sdkProviderId,
 			$name,
 			ProviderTypeEnum::server(),
 			null,
@@ -149,7 +159,7 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 	 * {@inheritDoc}
 	 */
 	protected static function createModelMetadataDirectory(): ModelMetadataDirectoryInterface {
-		return new CompatibleEndpointModelDirectory();
+		return new CompatibleEndpointModelDirectory( static::$endpointUrl );
 	}
 }
 
@@ -166,17 +176,45 @@ class ProviderFactory {
 	private static array $registeredProviders = [];
 
 	/**
-	 * Class name prefix for dynamic classes.
+	 * Global-namespace class name prefix for dynamic classes.
+	 *
+	 * Classes are created in the global namespace to avoid PHP eval()
+	 * namespace-resolution issues. The prefix is long enough to be unique.
 	 */
-	private const CLASS_PREFIX = 'CompatibleEndpointProvider_';
+	private const CLASS_PREFIX = 'UAICCE_DynProvider_';
+
+	/**
+	 * Fully-qualified name of the base class, for use inside eval() strings.
+	 */
+	private const FQ_BASE_CLASS = '\\UltimateAiConnectorCompatibleEndpoints\\DynamicCompatibleEndpointProvider';
+
+	/**
+	 * Build the SDK provider ID for a given registration order index.
+	 *
+	 * The ai-agent plugin expects IDs that start with
+	 * 'ai-provider-for-any-openai-compatible'. The primary provider gets the
+	 * bare ID; subsequent providers get a numeric suffix.
+	 *
+	 * @param int $index 0-based registration index.
+	 * @return string SDK provider ID.
+	 */
+	public static function sdkProviderIdForIndex( int $index ): string {
+		return $index === 0
+			? 'ai-provider-for-any-openai-compatible'
+			: 'ai-provider-for-any-openai-compatible-' . ( $index + 1 );
+	}
 
 	/**
 	 * Create a provider class for a config.
 	 *
+	 * Dynamic classes are placed in the global namespace because PHP's eval()
+	 * does not inherit the calling namespace for class declarations.
+	 *
 	 * @param array $config Provider configuration.
-	 * @return string Class name.
+	 * @param int   $index  0-based registration order index (determines SDK ID).
+	 * @return string Fully-qualified class name (global namespace, no leading \).
 	 */
-	public static function createProviderClass( array $config ): string {
+	public static function createProviderClass( array $config, int $index = 0 ): string {
 		$id   = $config['id'] ?? '';
 		$name = $config['name'] ?? '';
 
@@ -184,25 +222,31 @@ class ProviderFactory {
 			return self::$registeredProviders[ $id ];
 		}
 
-		$class_name = self::CLASS_PREFIX . self::sanitize_class_name( $id );
+		// Global-namespace class name — unique by provider ID slug.
+		$class_name    = self::CLASS_PREFIX . self::sanitize_class_name( $id );
+		$sdk_provider_id = self::sdkProviderIdForIndex( $index );
 
 		// Define the dynamic class only if not already defined.
 		if ( ! class_exists( $class_name, false ) ) {
 			$endpoint_url = $config['endpoint_url'] ?? '';
-			$timeout     = (int) ( $config['timeout'] ?? 360 );
+			$timeout      = (int) ( $config['timeout'] ?? 360 );
 
-			// Escape for PHP single-quoted string.
-			$escaped_id           = addcslashes( $id, "'\\" );
-			$escaped_name         = addcslashes( $name, "'\\" );
-			$escaped_endpoint_url = addcslashes( $endpoint_url, "'\\" );
+			// Escape values for embedding in a PHP single-quoted string.
+			$escaped_id            = addcslashes( $id, "'\\" );
+			$escaped_name          = addcslashes( $name, "'\\" );
+			$escaped_endpoint_url  = addcslashes( $endpoint_url, "'\\" );
+			$escaped_sdk_id        = addcslashes( $sdk_provider_id, "'\\" );
 
-			// Create a dynamic subclass.
+			$base = self::FQ_BASE_CLASS;
+
+			// phpcs:ignore Squiz.PHP.Eval.Discouraged
 			eval(
-				"class {$class_name} extends DynamicCompatibleEndpointProvider {
+				"class {$class_name} extends {$base} {
 					public static string \$providerId = '{$escaped_id}';
 					public static string \$providerName = '{$escaped_name}';
 					public static string \$endpointUrl = '{$escaped_endpoint_url}';
 					public static int \$timeout = {$timeout};
+					public static string \$sdkProviderId = '{$escaped_sdk_id}';
 				}"
 			);
 		}
@@ -215,9 +259,10 @@ class ProviderFactory {
 	 * Register a provider with the AI Client.
 	 *
 	 * @param array $config Provider configuration.
+	 * @param int   $index  0-based registration order index.
 	 * @return bool True if registered.
 	 */
-	public static function registerProvider( array $config ): bool {
+	public static function registerProvider( array $config, int $index = 0 ): bool {
 		if ( ! class_exists( AiClient::class ) ) {
 			return false;
 		}
@@ -227,7 +272,7 @@ class ProviderFactory {
 			return false;
 		}
 
-		$class_name = self::createProviderClass( $config );
+		$class_name = self::createProviderClass( $config, $index );
 		$registry  = AiClient::defaultRegistry();
 
 		if ( $registry->hasProvider( $class_name ) ) {
@@ -235,6 +280,10 @@ class ProviderFactory {
 		}
 
 		$registry->registerProvider( $class_name );
+
+		// Register the endpoint URL so CompatibleEndpointModel can resolve it at request time.
+		$sdk_provider_id = self::sdkProviderIdForIndex( $index );
+		CompatibleEndpointModel::registerEndpointUrl( $sdk_provider_id, $config['endpoint_url'] );
 
 		// Set API key authentication.
 		$api_key = $config['api_key'] ?? '';
@@ -255,8 +304,12 @@ class ProviderFactory {
 	 */
 	public static function registerAllProviders(): void {
 		$providers = get_providers_ordered();
+		$index     = 0;
 		foreach ( $providers as $provider ) {
-			self::registerProvider( $provider );
+			if ( ! empty( $provider['endpoint_url'] ) && ( $provider['enabled'] ?? true ) ) {
+				self::registerProvider( $provider, $index );
+				++$index;
+			}
 		}
 	}
 
