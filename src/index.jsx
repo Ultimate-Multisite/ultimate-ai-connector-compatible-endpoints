@@ -391,6 +391,7 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 	 * Add a new provider.
 	 */
 	const addProvider = useCallback( () => {
+		const newIndex = providers.length;
 		const newProvider = {
 			id: generateProviderId(),
 			name: '',
@@ -401,7 +402,8 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			enabled: true,
 		};
 		setProviders( ( prev ) => [ ...prev, newProvider ] );
-	}, [] );
+		setExpandedProviders( ( prev ) => ( { ...prev, [ newIndex ]: true } ) );
+	}, [ providers.length ] );
 
 	/**
 	 * Move a provider up/down in the list.
