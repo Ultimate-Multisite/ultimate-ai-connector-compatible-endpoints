@@ -27,7 +27,7 @@ function enqueue_connector_module(): void {
 				'import' => 'static',
 			],
 		],
-		'1.0.0'
+		ULTIMATE_AI_CONNECTOR_COMPATIBLE_ENDPOINTS_VERSION
 	);
 	wp_enqueue_script_module( 'ultimate-ai-connector-compatible-endpoints' );
 }
