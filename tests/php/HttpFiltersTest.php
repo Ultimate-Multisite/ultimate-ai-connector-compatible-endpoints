@@ -69,6 +69,41 @@ class HttpFiltersTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test timeout is NOT extended for /models requests.
+	 *
+	 * The long timeout is only needed for generation requests. Availability
+	 * checks (which hit /models) must not block for up to 360s.
+	 */
+	public function test_timeout_unchanged_for_models_endpoint() {
+		update_option( 'ultimate_ai_connector_endpoint_url', 'http://localhost:11434/v1' );
+		update_option( 'ultimate_ai_connector_timeout', 300 );
+
+		$args   = [ 'timeout' => 30 ];
+		$result = \UltimateAiConnectorCompatibleEndpoints\increase_timeout(
+			$args,
+			'http://localhost:11434/v1/models'
+		);
+
+		$this->assertSame( 30, $result['timeout'] );
+	}
+
+	/**
+	 * Test timeout is NOT extended for other non-completions paths.
+	 */
+	public function test_timeout_unchanged_for_non_completions_path() {
+		update_option( 'ultimate_ai_connector_endpoint_url', 'http://localhost:11434/v1' );
+		update_option( 'ultimate_ai_connector_timeout', 300 );
+
+		$args   = [ 'timeout' => 30 ];
+		$result = \UltimateAiConnectorCompatibleEndpoints\increase_timeout(
+			$args,
+			'http://localhost:11434/v1/embeddings'
+		);
+
+		$this->assertSame( 30, $result['timeout'] );
+	}
+
+	/**
 	 * Test non-standard port is added to allowed ports.
 	 */
 	public function test_allow_endpoint_port() {

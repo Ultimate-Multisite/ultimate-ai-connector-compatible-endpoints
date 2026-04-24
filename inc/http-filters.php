@@ -14,16 +14,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Increases the HTTP timeout for requests to the configured endpoint.
+ * Increases the HTTP timeout for AI generation requests to the configured endpoint.
  *
- * Local/self-hosted LLMs can take over 30 seconds to respond, especially
- * on CPU-only hardware. The default WordPress timeout of 30s is too short.
+ * The extended timeout is applied only to chat-completions requests. The /models
+ * endpoint used for availability checks and model listing must NOT get the long
+ * timeout: a slow or unreachable endpoint would otherwise block every page load
+ * for up to 360 seconds while the SDK's isConfigured() check waits for a response.
+ *
+ * Local/self-hosted LLMs can take over 30 seconds to respond during generation,
+ * especially on CPU-only hardware, so the long timeout remains for those paths.
  *
  * @param array  $parsed_args HTTP request arguments.
  * @param string $url         Request URL.
  * @return array Modified arguments.
  */
 function increase_timeout( array $parsed_args, string $url ): array {
+	// Only extend timeout for chat completions, not model listing or other paths.
+	if ( ! str_contains( $url, '/chat/completions' ) ) {
+		return $parsed_args;
+	}
+
 	$endpoint_url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
 	if ( empty( $endpoint_url ) ) {
 		return $parsed_args;

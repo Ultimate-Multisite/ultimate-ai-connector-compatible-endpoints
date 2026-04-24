@@ -17,7 +17,6 @@ use WordPress\AiClient\Providers\Http\Enums\RequestAuthenticationMethod;
 use WordPress\AiClient\Providers\Models\Contracts\ModelInterface;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;
-use WordPress\AiClient\Providers\ApiBasedImplementation\ListModelsApiBasedProviderAvailability;
 use WordPress\AiClient\Common\Exception\RuntimeException;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -103,11 +102,46 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * Returns a configuration-based availability check rather than a live HTTP
+	 * request. See CompatibleEndpointProvider::createProviderAvailability() for
+	 * full rationale — the same blocking-request hazard applies here because each
+	 * dynamic subclass is registered independently with the SDK registry.
+	 *
+	 * The endpoint URL is captured at call time via late-static binding so that
+	 * each dynamic subclass (CompatibleEndpointProvider_XYZ) returns its own
+	 * URL rather than the base class's empty default.
 	 */
 	protected static function createProviderAvailability(): ProviderAvailabilityInterface {
-		return new ListModelsApiBasedProviderAvailability(
-			static::modelMetadataDirectory()
-		);
+		// Capture via LSB — static:: resolves to the concrete dynamic subclass.
+		$endpoint_url = static::$endpointUrl;
+
+		return new class( $endpoint_url ) implements ProviderAvailabilityInterface {
+			/**
+			 * Endpoint URL captured at instantiation time.
+			 *
+			 * @var string
+			 */
+			private string $endpointUrl;
+
+			/**
+			 * Constructor.
+			 *
+			 * @param string $endpointUrl Endpoint URL from the dynamic provider class.
+			 */
+			public function __construct( string $endpointUrl ) {
+				$this->endpointUrl = $endpointUrl;
+			}
+
+			/**
+			 * Checks whether the endpoint URL is configured.
+			 *
+			 * @return bool True when the endpoint URL is non-empty.
+			 */
+			public function isConfigured(): bool {
+				return ! empty( $this->endpointUrl );
+			}
+		};
 	}
 
 	/**
