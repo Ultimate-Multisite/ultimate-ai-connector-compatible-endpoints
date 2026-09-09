@@ -3,7 +3,7 @@ Contributors: superdav42
 Tags: ai, connector, ollama, llm, local-ai
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 2.1.3
+Stable tag: 2.2.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -77,6 +77,13 @@ Yes, provided the Gutenberg plugin (version 23.0 or later) is active. Gutenberg 
 2. Model selection in the WordPress AI Client — all models from your endpoint appear automatically.
 
 == Changelog ==
+
+= 2.2.0 =
+Version 2.2.0 - Released on 2026-09-09
+- New: Compatible endpoints can now generate images through the WordPress AI Client when the endpoint supports image generation.
+- New: Model discovery now prefetches and presents available endpoint models more reliably in the connector settings.
+- Fix: Cloud model selection and structured output requests now work correctly with compatible endpoints.
+- Fix: Image support is guarded for older AI Client SDK versions so the plugin remains compatible while newer SDKs are unavailable.
 
 = 2.1.3 =
 Version 2.1.3 - Released on 2026-08-19
