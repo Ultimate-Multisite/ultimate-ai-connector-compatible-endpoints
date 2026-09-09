@@ -68,6 +68,9 @@ function register_provider(): void {
 	// Set the base URL and default model before any SDK method can call baseUrl().
 	CompatibleEndpointProvider::$endpointUrl = $endpoint_url;
 	CompatibleEndpointProvider::$defaultModel = (string) get_option( 'ultimate_ai_connector_default_model', '' );
+	CompatibleEndpointProvider::$imageProtocol = (string) get_option( 'ultimate_ai_connector_image_protocol', 'none' );
+	CompatibleEndpointProvider::$imageModel = (string) get_option( 'ultimate_ai_connector_image_model', '' );
+	CompatibleEndpointImageModel::registerEndpointUrl( 'ultimate-ai-connector-compatible-endpoints', $endpoint_url );
 
 	$registry = AiClient::defaultRegistry();
 

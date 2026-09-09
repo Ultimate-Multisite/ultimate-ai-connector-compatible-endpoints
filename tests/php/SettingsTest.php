@@ -24,6 +24,8 @@ class SettingsTest extends WP_UnitTestCase {
 		delete_option( 'ultimate_ai_connector_api_key' );
 		delete_option( 'ultimate_ai_connector_default_model' );
 		delete_option( 'ultimate_ai_connector_timeout' );
+		delete_option( 'ultimate_ai_connector_image_protocol' );
+		delete_option( 'ultimate_ai_connector_image_model' );
 	}
 
 	/**
@@ -39,6 +41,8 @@ class SettingsTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'ultimate_ai_connector_api_key', $registered );
 		$this->assertArrayHasKey( 'ultimate_ai_connector_default_model', $registered );
 		$this->assertArrayHasKey( 'ultimate_ai_connector_timeout', $registered );
+		$this->assertArrayHasKey( 'ultimate_ai_connector_image_protocol', $registered );
+		$this->assertArrayHasKey( 'ultimate_ai_connector_image_model', $registered );
 	}
 
 	/**
