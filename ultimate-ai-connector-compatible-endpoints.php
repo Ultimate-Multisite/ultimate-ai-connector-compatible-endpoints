@@ -61,6 +61,7 @@ function load_sdk_dependent_classes(): void {
 
 	require_once __DIR__ . '/inc/class-provider.php';
 	require_once __DIR__ . '/inc/class-model.php';
+	require_once __DIR__ . '/inc/class-image-model.php';
 	require_once __DIR__ . '/inc/class-model-directory.php';
 	require_once __DIR__ . '/inc/class-provider-factory.php';
 	require_once __DIR__ . '/inc/provider-registration.php';

@@ -67,6 +67,12 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 	 */
 	public static int $timeout = 360;
 
+	/** @var string Image generation protocol selected for this provider. */
+	public static string $imageProtocol = 'none';
+
+	/** @var string Explicitly selected image generation model for this provider. */
+	public static string $imageModel = '';
+
 	/**
 	 * SDK provider ID emitted by createProviderMetadata().
 	 *
@@ -93,6 +99,14 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 	): ModelInterface {
 		$capabilities = $modelMetadata->getSupportedCapabilities();
 		foreach ( $capabilities as $capability ) {
+			if ( $capability->isImageGeneration() ) {
+				if ( 'openai' === static::$imageProtocol ) {
+					return new CompatibleEndpointImageModel( $modelMetadata, $providerMetadata );
+				}
+				if ( 'chat_completions' === static::$imageProtocol ) {
+					return new CompatibleEndpointChatImageModel( $modelMetadata, $providerMetadata );
+				}
+			}
 			if ( $capability->isTextGeneration() ) {
 				return new CompatibleEndpointModel( $modelMetadata, $providerMetadata );
 			}
@@ -166,7 +180,7 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 	 * {@inheritDoc}
 	 */
 	protected static function createModelMetadataDirectory(): ModelMetadataDirectoryInterface {
-		return new CompatibleEndpointModelDirectory( static::$endpointUrl, static::$defaultModel );
+		return new CompatibleEndpointModelDirectory( static::$endpointUrl, static::$defaultModel, static::$imageProtocol, static::$imageModel );
 	}
 }
 
@@ -239,6 +253,8 @@ class ProviderFactory {
 			$endpoint_url  = $config['endpoint_url'] ?? '';
 			$default_model = $config['default_model'] ?? '';
 			$timeout       = (int) ( $config['timeout'] ?? 360 );
+			$image_protocol = $config['image_protocol'] ?? 'none';
+			$image_model    = $config['image_model'] ?? '';
 
 			// Escape values for embedding in a PHP single-quoted string.
 			$escaped_id            = addcslashes( $id, "'\\" );
@@ -246,6 +262,8 @@ class ProviderFactory {
 			$escaped_endpoint_url  = addcslashes( $endpoint_url, "'\\" );
 			$escaped_default_model = addcslashes( $default_model, "'\\" );
 			$escaped_sdk_id        = addcslashes( $sdk_provider_id, "'\\" );
+			$escaped_image_protocol = addcslashes( $image_protocol, "'\\" );
+			$escaped_image_model    = addcslashes( $image_model, "'\\" );
 
 			$base = self::FQ_BASE_CLASS;
 
@@ -257,6 +275,8 @@ class ProviderFactory {
 					public static string \$endpointUrl = '{$escaped_endpoint_url}';
 					public static string \$defaultModel = '{$escaped_default_model}';
 					public static int \$timeout = {$timeout};
+					public static string \$imageProtocol = '{$escaped_image_protocol}';
+					public static string \$imageModel = '{$escaped_image_model}';
 					public static string \$sdkProviderId = '{$escaped_sdk_id}';
 				}"
 			);
@@ -300,6 +320,7 @@ class ProviderFactory {
 		// thinking-mode wire format (reasoning_content / thinking / none).
 		$endpoint_type = $config['endpoint_type'] ?? 'generic';
 		CompatibleEndpointModel::registerEndpointType( $sdk_provider_id, $endpoint_type );
+		CompatibleEndpointImageModel::registerEndpointUrl( $sdk_provider_id, $config['endpoint_url'] );
 
 		// Set API key authentication.
 		$api_key = $config['api_key'] ?? '';

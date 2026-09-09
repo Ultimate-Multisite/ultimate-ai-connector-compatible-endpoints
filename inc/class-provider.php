@@ -43,6 +43,12 @@ class CompatibleEndpointProvider extends AbstractApiProvider {
 	 */
 	public static string $defaultModel = '';
 
+	/** @var string Image generation protocol for the legacy provider. */
+	public static string $imageProtocol = 'none';
+
+	/** @var string Explicit image model ID for the legacy provider. */
+	public static string $imageModel = '';
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -59,6 +65,14 @@ class CompatibleEndpointProvider extends AbstractApiProvider {
 	): ModelInterface {
 		$capabilities = $modelMetadata->getSupportedCapabilities();
 		foreach ( $capabilities as $capability ) {
+			if ( $capability->isImageGeneration() ) {
+				if ( 'chat_completions' === self::$imageProtocol ) {
+					return new CompatibleEndpointChatImageModel( $modelMetadata, $providerMetadata );
+				}
+				if ( 'openai' === self::$imageProtocol ) {
+					return new CompatibleEndpointImageModel( $modelMetadata, $providerMetadata );
+				}
+			}
 			if ( $capability->isTextGeneration() ) {
 				return new CompatibleEndpointModel( $modelMetadata, $providerMetadata );
 			}
@@ -113,6 +127,6 @@ class CompatibleEndpointProvider extends AbstractApiProvider {
 	 * {@inheritDoc}
 	 */
 	protected static function createModelMetadataDirectory(): ModelMetadataDirectoryInterface {
-		return new CompatibleEndpointModelDirectory( '', self::$defaultModel );
+		return new CompatibleEndpointModelDirectory( '', self::$defaultModel, self::$imageProtocol, self::$imageModel );
 	}
 }
