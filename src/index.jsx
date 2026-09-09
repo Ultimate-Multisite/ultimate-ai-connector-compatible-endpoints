@@ -90,6 +90,13 @@ function getModelsCacheKey( configId, url ) {
 }
 
 /**
+ * Capture the saved connection fields that affect server-side discovery.
+ */
+function getConnectionSignature( provider ) {
+	return ( provider.endpoint_url || '' ) + '\n' + ( provider.api_key || '' );
+}
+
+/**
  * "ANY LLM" text icon used as the connector logo.
  */
 function Logo() {
@@ -162,7 +169,10 @@ function ProviderCard( {
 	isSaving,
 	saveError,
 	models = [],
-	isLoadingModels,
+	modelState = { status: 'initial' },
+	onLoadModels,
+	canLoadModels,
+	requiresSave,
 } ) {
 	const [ isExpanded, setIsExpanded ] = useState( initialExpanded );
 	const [ name, setName ] = useState( provider.name || '' );
@@ -262,7 +272,7 @@ function ProviderCard( {
 								placeholder="http://localhost:11434/v1"
 								disabled={ isSaving }
 								help={ __(
-									'Base URL (e.g. Ollama, LM Studio, OpenRouter)'
+									'Enter the API base URL, not a complete /models or /chat/completions URL (for example, https://api.mammouth.ai/v1).'
 								) }
 							/>
 							<HStack
@@ -339,24 +349,49 @@ function ProviderCard( {
 									'Optional. Leave blank for servers without auth.'
 								) }
 							/>
-							{ isLoadingModels ? (
+							<SelectControl
+								__nextHasNoMarginBottom
+								label={ __( 'Default Model' ) }
+								value={ defaultModel }
+								options={ modelOptions }
+								onChange={ ( value ) => {
+									setDefaultModel( value );
+									handleChange( 'default_model', value );
+								} }
+								disabled={ isSaving }
+							/>
+							{ modelState.status === 'loading' && (
 								<HStack spacing={ 2 } expanded={ false }>
 									<Spinner />
 									<span>{ __( 'Loading models\u2026' ) }</span>
 								</HStack>
-							) : (
-								<SelectControl
-									__nextHasNoMarginBottom
-									label={ __( 'Default Model' ) }
-									value={ defaultModel }
-									options={ modelOptions }
-									onChange={ ( value ) => {
-										setDefaultModel( value );
-										handleChange( 'default_model', value );
-									} }
-									disabled={ isSaving }
-								/>
 							) }
+							{ modelState.status === 'success' && (
+								<span>{ `${ models.length } ${ __( 'models loaded.' ) }` }</span>
+							) }
+							{ modelState.status === 'empty' && (
+								<span>{ __( 'No models were returned by this endpoint.' ) }</span>
+							) }
+							{ modelState.status === 'error' && (
+								<span style={ { color: '#cc1818' } }>
+									{ modelState.error || __( 'Could not load models. Check the endpoint and saved credentials.' ) }
+								</span>
+							) }
+							{ requiresSave && (
+								<span>{ __( 'Save this provider before loading models so its credentials stay server-side.' ) }</span>
+							) }
+							{ ! requiresSave && modelState.status === 'initial' && (
+								<span>{ __( 'Load models to choose a default model, or leave Auto-select enabled.' ) }</span>
+							) }
+							<Button
+								variant="secondary"
+								onClick={ onLoadModels }
+								disabled={ isSaving || ! canLoadModels || modelState.status === 'loading' }
+							>
+								{ modelState.status === 'error' || modelState.status === 'empty'
+									? __( 'Retry loading models' )
+									: __( 'Load models' ) }
+							</Button>
 							<SelectControl
 								__nextHasNoMarginBottom
 								label={ __( 'Endpoint type' ) }
@@ -381,7 +416,7 @@ function ProviderCard( {
 								} }
 								disabled={ isSaving }
 								help={ __(
-									'Choose "Generic" for standard endpoints. Select a thinking-aware type when using DeepSeek-flavoured proxies or Ollama reasoning models — this passes thought content back to the endpoint as required by those APIs.'
+									'Generic is recommended for Mammouth.ai and most OpenAI-compatible APIs. This does not select a provider or model, and normally does not affect plain responses. DeepSeek-compatible reattaches prior reasoning through reasoning_content; Ollama reattaches prior thought content through thinking.'
 								) }
 							/>
 							<NumberControl
@@ -429,6 +464,8 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 	const [ isLoading, setIsLoading ] = useState( true );
 	const [ saveError, setSaveError ] = useState( null );
 	const [ modelsCache, setModelsCache ] = useState( {} );
+	const savedConnectionSignaturesRef = useRef( {} );
+	const modelRequestsRef = useRef( new Set() );
 
 	const hasProviders = providers.length > 0;
 
@@ -460,6 +497,9 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			}
 
 			setProviderOrder( loadedOrder );
+			savedConnectionSignaturesRef.current = Object.fromEntries(
+				loadedProviders.map( ( provider ) => [ provider.id, getConnectionSignature( provider ) ] )
+			);
 		} catch {
 			// Silently fail.
 		} finally {
@@ -471,17 +511,6 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 		fetchSettings();
 	}, [ fetchSettings ] );
 
-	// Fetch models for all providers once initial settings are loaded.
-	useEffect( () => {
-		if ( ! isLoading ) {
-			providers.forEach( ( provider ) => {
-				if ( provider.endpoint_url && provider.id ) {
-					fetchModelsForUrl( provider.endpoint_url, provider.id );
-				}
-			} );
-		}
-	}, [ isLoading, providers ] );
-
 	/**
 	 * Fetch models for an endpoint URL.
 	 */
@@ -490,9 +519,14 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			return;
 		}
 		const cacheKey = getModelsCacheKey( configId, url );
-		if ( modelsCache[ cacheKey ] ) {
+		if ( modelRequestsRef.current.has( cacheKey ) ) {
 			return;
 		}
+		modelRequestsRef.current.add( cacheKey );
+		setModelsCache( ( prev ) => ( {
+			...prev,
+			[ cacheKey ]: { status: 'loading', models: [] },
+		} ) );
 		try {
 			const params = new URLSearchParams( {
 				endpoint_url: url,
@@ -501,19 +535,39 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			const result = await apiFetch( {
 				path: '/ultimate-ai-connector-compatible-endpoints/v1/models?' + params.toString(),
 			} );
+			const models = Array.isArray( result ) ? result : [];
 			setModelsCache( ( prev ) => ( {
 				...prev,
-				[ cacheKey ]: result,
+				[ cacheKey ]: {
+					status: models.length ? 'success' : 'empty',
+					models,
+				},
 			} ) );
-		} catch {
-			// Ignore errors.
+		} catch ( error ) {
+			setModelsCache( ( prev ) => ( {
+				...prev,
+				[ cacheKey ]: {
+					status: 'error',
+					models: [],
+					error: error instanceof Error ? error.message : __( 'Could not load models. Check the endpoint and saved credentials.' ),
+				},
+			} ) );
+		} finally {
+			modelRequestsRef.current.delete( cacheKey );
 		}
-	}, [ modelsCache ] );
+	}, [] );
+
+	const invalidateModelsForProvider = useCallback( ( configId ) => {
+		setModelsCache( ( prev ) => Object.fromEntries(
+			Object.entries( prev ).filter( ( [ key ] ) => ! key.startsWith( 'models_' + configId + '_' ) )
+		) );
+	}, [] );
 
 	/**
 	 * Update a provider in the list.
 	 */
 	const updateProvider = useCallback( ( index, updatedProvider ) => {
+		const previousProvider = providers[ index ];
 		setProviders( ( prev ) => {
 			const next = [ ...prev ];
 			next[ index ] = {
@@ -523,22 +577,20 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			return next;
 		} );
 
-		// Fetch models if endpoint changed.
-		if ( updatedProvider.endpoint_url ) {
-			fetchModelsForUrl( updatedProvider.endpoint_url, updatedProvider.id );
+		if (
+			previousProvider &&
+			( updatedProvider.endpoint_url !== previousProvider.endpoint_url ||
+				updatedProvider.api_key !== previousProvider.api_key )
+		) {
+			invalidateModelsForProvider( updatedProvider.id );
 		}
-	}, [ fetchModelsForUrl ] );
+	}, [ invalidateModelsForProvider, providers ] );
 
 	/**
 	 * Remove a provider.
 	 */
 	const removeProvider = useCallback( ( index ) => {
 		setProviders( ( prev ) => prev.filter( ( _, i ) => i !== index ) );
-		setExpandedProviders( ( prev ) => {
-			const next = { ...prev };
-			delete next[ index ];
-			return next;
-		} );
 	}, [] );
 
 	/**
@@ -599,6 +651,14 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 				ultimate_ai_connector_provider_order: order,
 			},
 		} );
+			savedConnectionSignaturesRef.current = Object.fromEntries(
+				providersToSave.map( ( provider ) => [ provider.id, getConnectionSignature( provider ) ] )
+			);
+			setProviders( providersToSave );
+			setModelsCache( {} );
+			providersToSave.forEach( ( provider ) => {
+				fetchModelsForUrl( provider.endpoint_url, provider.id );
+			} );
 			setIsExpanded( false );
 		} catch ( error ) {
 			setSaveError(
@@ -616,6 +676,7 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 	 */
 	const handleCancel = async () => {
 		await fetchSettings();
+		setModelsCache( {} );
 		setIsExpanded( false );
 		setSaveError( null );
 	};
@@ -655,17 +716,25 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			</p>
 
 			{ providers.map( ( provider, index ) => (
-				<ProviderCard
-					key={ provider.id || index }
-					provider={ provider }
-					initialExpanded={ !! provider._new }
-					onUpdate={ ( updated ) => updateProvider( index, updated ) }
-					onRemove={ () => removeProvider( index ) }
-					isSaving={ isSaving }
-					saveError={ null }
-					models={ modelsCache[ getModelsCacheKey( provider.id, provider.endpoint_url ) ] || [] }
-					isLoadingModels={ false }
-				/>
+				(() => {
+					const cacheKey = getModelsCacheKey( provider.id, provider.endpoint_url );
+					const modelState = modelsCache[ cacheKey ] || { status: 'initial', models: [] };
+					const requiresSave = savedConnectionSignaturesRef.current[ provider.id ] !== getConnectionSignature( provider );
+					return <ProviderCard
+						key={ provider.id || index }
+						provider={ provider }
+						initialExpanded={ !! provider._new }
+						onUpdate={ ( updated ) => updateProvider( index, updated ) }
+						onRemove={ () => removeProvider( index ) }
+						isSaving={ isSaving }
+						saveError={ null }
+						models={ modelState.models }
+						modelState={ modelState }
+						onLoadModels={ () => fetchModelsForUrl( provider.endpoint_url, provider.id ) }
+						canLoadModels={ !! provider.endpoint_url && ! requiresSave }
+						requiresSave={ requiresSave }
+					/>;
+				})()
 			) ) }
 
 			<HStack expanded={ false }>
