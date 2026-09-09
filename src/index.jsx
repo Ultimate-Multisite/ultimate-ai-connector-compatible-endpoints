@@ -588,17 +588,21 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 				.filter( ( p ) => p.enabled )
 				.map( ( p ) => p.id );
 
-		// Strip internal-only marker before persisting.
-		const providersToSave = providers.map( ( { _new, ...p } ) => p );
+			// Strip internal-only marker before persisting.
+			const providersToSave = providers.map( ( { _new, ...p } ) => p );
 
-		await apiFetch( {
-			method: 'POST',
-			path: '/wp/v2/settings',
-			data: {
-				ultimate_ai_connector_providers: providersToSave,
-				ultimate_ai_connector_provider_order: order,
-			},
-		} );
+			await apiFetch( {
+				method: 'POST',
+				path: '/wp/v2/settings',
+				data: {
+					ultimate_ai_connector_providers: providersToSave,
+					ultimate_ai_connector_provider_order: order,
+				},
+			} );
+			// Model discovery uses saved credentials. Retry after saving a new
+			// provider or changing its key, even when the endpoint is unchanged.
+			setModelsCache( {} );
+			setProviders( providersToSave );
 			setIsExpanded( false );
 		} catch ( error ) {
 			setSaveError(
