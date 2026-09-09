@@ -498,9 +498,44 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 	const [ saveError, setSaveError ] = useState( null );
 	const [ modelsCache, setModelsCache ] = useState( {} );
 	const savedConnectionSignaturesRef = useRef( {} );
-	const modelRequestsRef = useRef( new Set() );
+	const modelRequestsRef = useRef( new Map() );
 
 	const hasProviders = providers.length > 0;
+
+	/**
+	 * Apply the canonical settings returned by WordPress after sanitization.
+	 *
+	 * @param {Object} settings Settings REST response.
+	 * @return {Array} Saved provider configurations.
+	 */
+	const applySettings = useCallback( ( settings ) => {
+		const loadedProviders = settings.ultimate_ai_connector_providers || [];
+		const loadedOrder = settings.ultimate_ai_connector_provider_order || [];
+		let nextProviders = loadedProviders;
+
+		// Handle legacy single-provider config for migration.
+		const legacyUrl = settings.ultimate_ai_connector_endpoint_url;
+		if ( ! loadedProviders.length && legacyUrl ) {
+			nextProviders = [ {
+				id: generateProviderId(),
+				name: 'Default',
+				endpoint_url: legacyUrl,
+				api_key: settings.ultimate_ai_connector_api_key || '',
+				default_model: settings.ultimate_ai_connector_default_model || '',
+				timeout: settings.ultimate_ai_connector_timeout || 360,
+				enabled: true,
+				image_protocol: settings.ultimate_ai_connector_image_protocol || 'none',
+				image_model: settings.ultimate_ai_connector_image_model || '',
+			} ];
+		}
+
+		setProviders( nextProviders );
+		setProviderOrder( loadedOrder );
+		savedConnectionSignaturesRef.current = Object.fromEntries(
+			nextProviders.map( ( provider ) => [ provider.id, getConnectionSignature( provider ) ] )
+		);
+		return nextProviders;
+	}, [] );
 
 	/**
 	 * Fetch providers from settings.
@@ -510,37 +545,13 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			const settings = await apiFetch( {
 				path: '/wp/v2/settings?_fields=ultimate_ai_connector_providers,ultimate_ai_connector_provider_order,ultimate_ai_connector_endpoint_url,ultimate_ai_connector_api_key,ultimate_ai_connector_default_model,ultimate_ai_connector_timeout,ultimate_ai_connector_image_protocol,ultimate_ai_connector_image_model',
 			} );
-			const loadedProviders = settings.ultimate_ai_connector_providers || [];
-			const loadedOrder = settings.ultimate_ai_connector_provider_order || [];
-
-			// Handle legacy single-provider config for migration.
-			const legacyUrl = settings.ultimate_ai_connector_endpoint_url;
-			if ( ! loadedProviders.length && legacyUrl ) {
-				setProviders( [ {
-					id: generateProviderId(),
-					name: 'Default',
-					endpoint_url: legacyUrl,
-					api_key: settings.ultimate_ai_connector_api_key || '',
-					default_model: settings.ultimate_ai_connector_default_model || '',
-					timeout: settings.ultimate_ai_connector_timeout || 360,
-					enabled: true,
-					image_protocol: settings.ultimate_ai_connector_image_protocol || 'none',
-					image_model: settings.ultimate_ai_connector_image_model || '',
-				} ] );
-			} else {
-				setProviders( loadedProviders );
-			}
-
-			setProviderOrder( loadedOrder );
-			savedConnectionSignaturesRef.current = Object.fromEntries(
-				loadedProviders.map( ( provider ) => [ provider.id, getConnectionSignature( provider ) ] )
-			);
+			applySettings( settings );
 		} catch {
 			// Silently fail.
 		} finally {
 			setIsLoading( false );
 		}
-	}, [] );
+	}, [ applySettings ] );
 
 	useEffect( () => {
 		fetchSettings();
@@ -557,7 +568,8 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 		if ( modelRequestsRef.current.has( cacheKey ) ) {
 			return;
 		}
-		modelRequestsRef.current.add( cacheKey );
+		const requestToken = {};
+		modelRequestsRef.current.set( cacheKey, requestToken );
 		setModelsCache( ( prev ) => ( {
 			...prev,
 			[ cacheKey ]: { status: 'loading', models: [] },
@@ -571,6 +583,9 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 				path: '/ultimate-ai-connector-compatible-endpoints/v1/models?' + params.toString(),
 			} );
 			const models = Array.isArray( result ) ? result : [];
+			if ( modelRequestsRef.current.get( cacheKey ) !== requestToken ) {
+				return;
+			}
 			setModelsCache( ( prev ) => ( {
 				...prev,
 				[ cacheKey ]: {
@@ -579,6 +594,9 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 				},
 			} ) );
 		} catch ( error ) {
+			if ( modelRequestsRef.current.get( cacheKey ) !== requestToken ) {
+				return;
+			}
 			setModelsCache( ( prev ) => ( {
 				...prev,
 				[ cacheKey ]: {
@@ -588,14 +606,22 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 				},
 			} ) );
 		} finally {
-			modelRequestsRef.current.delete( cacheKey );
+			if ( modelRequestsRef.current.get( cacheKey ) === requestToken ) {
+				modelRequestsRef.current.delete( cacheKey );
+			}
 		}
 	}, [] );
 
 	const invalidateModelsForProvider = useCallback( ( configId ) => {
+		const keyPrefix = 'models_' + configId + '_';
 		setModelsCache( ( prev ) => Object.fromEntries(
-			Object.entries( prev ).filter( ( [ key ] ) => ! key.startsWith( 'models_' + configId + '_' ) )
+			Object.entries( prev ).filter( ( [ key ] ) => ! key.startsWith( keyPrefix ) )
 		) );
+		for ( const key of modelRequestsRef.current.keys() ) {
+			if ( key.startsWith( keyPrefix ) ) {
+				modelRequestsRef.current.delete( key );
+			}
+		}
 	}, [] );
 
 	/**
@@ -677,23 +703,21 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 				.filter( ( p ) => p.enabled )
 				.map( ( p ) => p.id );
 
-		// Strip internal-only marker before persisting.
-		const providersToSave = providers.map( ( { _new, ...p } ) => p );
+			// Strip internal-only marker before persisting.
+			const providersToSave = providers.map( ( { _new, ...p } ) => p );
 
-		await apiFetch( {
-			method: 'POST',
-			path: '/wp/v2/settings',
-			data: {
-				ultimate_ai_connector_providers: providersToSave,
-				ultimate_ai_connector_provider_order: order,
-			},
-		} );
-			savedConnectionSignaturesRef.current = Object.fromEntries(
-				providersToSave.map( ( provider ) => [ provider.id, getConnectionSignature( provider ) ] )
-			);
-			setProviders( providersToSave );
+			const savedSettings = await apiFetch( {
+				method: 'POST',
+				path: '/wp/v2/settings',
+				data: {
+					ultimate_ai_connector_providers: providersToSave,
+					ultimate_ai_connector_provider_order: order,
+				},
+			} );
+			const savedProviders = applySettings( savedSettings );
 			setModelsCache( {} );
-			providersToSave.forEach( ( provider ) => {
+			modelRequestsRef.current.clear();
+			savedProviders.forEach( ( provider ) => {
 				fetchModelsForUrl( provider.endpoint_url, provider.id );
 			} );
 			setIsExpanded( false );
