@@ -31,7 +31,7 @@ const {
 	CardDivider,
 	CheckboxControl,
 } = wp.components;
-const { __ } = wp.i18n;
+const { __, _n, sprintf } = wp.i18n;
 const apiFetch = wp.apiFetch;
 
 /**
@@ -83,10 +83,17 @@ function generateProviderId() {
 }
 
 /**
+ * Build the provider-scoped prefix shared by model-cache keys.
+ */
+function getModelsCacheKeyPrefix( configId ) {
+	return 'models_' + configId + '_';
+}
+
+/**
  * Build a model-cache key scoped to both the provider config and endpoint URL.
  */
 function getModelsCacheKey( configId, url ) {
-	return 'models_' + configId + '_' + url;
+	return getModelsCacheKeyPrefix( configId ) + url;
 }
 
 /**
@@ -371,7 +378,13 @@ function ProviderCard( {
 								</HStack>
 							) }
 							{ modelState.status === 'success' && (
-								<span>{ `${ models.length } ${ __( 'models loaded.' ) }` }</span>
+								<span>
+									{ sprintf(
+										/* translators: %d: number of models loaded. */
+										_n( '%d model loaded.', '%d models loaded.', models.length ),
+										models.length
+									) }
+								</span>
 							) }
 							{ modelState.status === 'empty' && (
 								<span>{ __( 'No models were returned by this endpoint.' ) }</span>
@@ -613,7 +626,7 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 	}, [] );
 
 	const invalidateModelsForProvider = useCallback( ( configId ) => {
-		const keyPrefix = 'models_' + configId + '_';
+		const keyPrefix = getModelsCacheKeyPrefix( configId );
 		setModelsCache( ( prev ) => Object.fromEntries(
 			Object.entries( prev ).filter( ( [ key ] ) => ! key.startsWith( keyPrefix ) )
 		) );

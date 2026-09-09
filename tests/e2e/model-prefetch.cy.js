@@ -78,9 +78,6 @@ describe( 'Model discovery regression', () => {
 			pathname: '/index.php',
 			query: { rest_route: '/ultimate-ai-connector-compatible-endpoints/v1/models' },
 		}, ( request ) => {
-			expect( request.query ).not.to.have.property( 'api_key' );
-			expect( request.query.config_id ).to.equal( savedProviderId );
-			expect( request.query.endpoint_url ).to.equal( 'https://api.mammouth.ai/v1' );
 			request.reply( [ { id: 'authenticated-model', name: 'Authenticated model' } ] );
 		} ).as( 'savedModels' );
 
@@ -96,12 +93,16 @@ describe( 'Model discovery regression', () => {
 		} );
 
 		cy.wait( '@saveProviders' );
-		cy.wait( '@savedModels' );
+		cy.wait( '@savedModels' ).then( ( interception ) => {
+			expect( interception.request.query ).not.to.have.property( 'api_key' );
+			expect( interception.request.query.config_id ).to.equal( savedProviderId );
+			expect( interception.request.query.endpoint_url ).to.equal( 'https://api.mammouth.ai/v1' );
+		} );
 		cy.get( '.connector-item--ultimate-ai-connector-compatible-endpoints' ).within( () => {
 			cy.contains( 'button', 'Manage' ).click();
 			cy.contains( 'Server-sanitized Mammouth' ).should( 'exist' );
 			cy.contains( 'button', 'Expand' ).click();
-			cy.contains( '1 models loaded.' ).should( 'exist' );
+			cy.contains( '1 model loaded.' ).should( 'exist' );
 			cy.contains( 'label', 'Default Model' ).invoke( 'attr', 'for' ).then( ( id ) => {
 				cy.get( '#' + id )
 					.find( 'option[value="authenticated-model"]' )
