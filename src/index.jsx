@@ -602,7 +602,9 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			// Model discovery uses saved credentials. Retry after saving a new
 			// provider or changing its key, even when the endpoint is unchanged.
 			setModelsCache( {} );
-			setProviders( providersToSave );
+			// Reload the server-sanitized list so rejected providers disappear
+			// without requiring a page refresh.
+			await fetchSettings();
 			setIsExpanded( false );
 		} catch ( error ) {
 			setSaveError(

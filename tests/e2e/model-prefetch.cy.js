@@ -14,13 +14,19 @@ describe( 'Model prefetch regression', () => {
 
 	it( 'fetches models with saved credentials without reloading the page', () => {
 		let saved = false;
+		let savedProviders = [];
+		let savedProviderOrder = [];
 		cy.wpLogin();
-		cy.intercept( 'GET', '**/wp/v2/settings?_fields=ultimate_ai_connector_providers*', {
-			ultimate_ai_connector_providers: [],
-			ultimate_ai_connector_provider_order: [],
+		cy.intercept( 'GET', '**/wp/v2/settings?_fields=ultimate_ai_connector_providers*', ( request ) => {
+			request.reply( {
+				ultimate_ai_connector_providers: savedProviders,
+				ultimate_ai_connector_provider_order: savedProviderOrder,
+			} );
 		} );
 		cy.intercept( 'POST', '**/wp/v2/settings*', ( request ) => {
 			saved = true;
+			savedProviders = request.body.ultimate_ai_connector_providers;
+			savedProviderOrder = request.body.ultimate_ai_connector_provider_order;
 			request.reply( request.body );
 		} ).as( 'saveProviders' );
 		cy.intercept( 'GET', '**/ultimate-ai-connector-compatible-endpoints/v1/models*', ( request ) => {
@@ -35,7 +41,7 @@ describe( 'Model prefetch regression', () => {
 			request.alias = 'savedModels';
 			request.reply( [ { id: 'authenticated-model', name: 'Authenticated model' } ] );
 		} );
-		cy.visit( '/wp-admin/options-connectors.php' );
+		cy.visit( '/wp-admin/options-general.php?page=connectors' );
 		cy.contains( 'button', 'Set up' ).click();
 		cy.contains( 'button', '+ Add provider' ).click();
 		cy.get( '.connector-settings' ).within( () => {
