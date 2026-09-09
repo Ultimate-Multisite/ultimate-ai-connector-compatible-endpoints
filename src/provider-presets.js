@@ -384,6 +384,13 @@ const PROVIDER_PRESETS = [
 		"group": "cloud"
 	},
 	{
+		"id": "mammouth-ai",
+		"name": "Mammouth.ai",
+		"url": "https://api.mammouth.ai/v1",
+		"doc": "https://mammouth.ai",
+		"group": "cloud"
+	},
+	{
 		"id": "meganova",
 		"name": "Meganova",
 		"url": "https://api.meganova.ai/v1",
