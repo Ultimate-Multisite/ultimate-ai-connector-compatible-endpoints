@@ -334,7 +334,7 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 	 * @return array Model capabilities.
 	 */
 	private function getCapabilitiesForModel( string $model_id, array $text_capabilities ): array {
-		if ( $model_id === $this->imageModel && 'none' !== $this->imageProtocol ) {
+		if ( $model_id === $this->imageModel && 'none' !== $this->imageProtocol && $this->supportsImageGeneration() ) {
 			return [ CapabilityEnum::imageGeneration() ];
 		}
 
@@ -349,7 +349,7 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 	 * @return array Model options.
 	 */
 	private function getOptionsForModel( string $model_id, array $text_options ): array {
-		if ( $model_id === $this->imageModel && 'none' !== $this->imageProtocol ) {
+		if ( $model_id === $this->imageModel && 'none' !== $this->imageProtocol && $this->supportsImageGeneration() ) {
 			return [
 				new SupportedOption( OptionEnum::candidateCount() ),
 				new SupportedOption( OptionEnum::outputFileType() ),
@@ -361,5 +361,14 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 		}
 
 		return $text_options;
+	}
+
+	/**
+	 * Checks whether the installed SDK can create image generation models.
+	 *
+	 * @return bool True when the SDK image abstraction is available.
+	 */
+	private function supportsImageGeneration(): bool {
+		return class_exists( 'WordPress\\AiClient\\Providers\\OpenAiCompatibleImplementation\\AbstractOpenAiCompatibleImageGenerationModel' );
 	}
 }

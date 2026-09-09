@@ -71,6 +71,9 @@ class ImageGenerationTest extends WP_UnitTestCase {
 	 * Chat completion image payloads normalize URLs, data URIs, and base64 into image files.
 	 */
 	public function test_chat_image_response_parser_normalizes_supported_payloads(): void {
+		if ( ! class_exists( 'WordPress\\AiClient\\Providers\\OpenAiCompatibleImplementation\\AbstractOpenAiCompatibleImageGenerationModel' ) ) {
+			$this->markTestSkipped( 'Image generation SDK abstraction is not available in this test environment.' );
+		}
 		$chat_model = 'UltimateAiConnectorCompatibleEndpoints\\CompatibleEndpointChatImageModel';
 		if ( ! class_exists( $chat_model ) ) {
 			$this->markTestSkipped( 'AI Client SDK not available in this test environment.' );
@@ -117,6 +120,9 @@ class ImageGenerationTest extends WP_UnitTestCase {
 	 * A missing image field is surfaced as an SDK response exception.
 	 */
 	public function test_chat_image_response_parser_rejects_missing_images(): void {
+		if ( ! class_exists( 'WordPress\\AiClient\\Providers\\OpenAiCompatibleImplementation\\AbstractOpenAiCompatibleImageGenerationModel' ) ) {
+			$this->markTestSkipped( 'Image generation SDK abstraction is not available in this test environment.' );
+		}
 		$chat_model = 'UltimateAiConnectorCompatibleEndpoints\\CompatibleEndpointChatImageModel';
 		if ( ! class_exists( $chat_model ) ) {
 			$this->markTestSkipped( 'AI Client SDK not available in this test environment.' );
