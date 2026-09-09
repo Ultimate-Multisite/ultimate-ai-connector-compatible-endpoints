@@ -172,6 +172,8 @@ function ProviderCard( {
 	const [ timeout, setTimeout ] = useState( provider.timeout ?? 360 );
 	const [ enabled, setEnabled ] = useState( provider.enabled ?? true );
 	const [ endpointType, setEndpointType ] = useState( provider.endpoint_type || 'generic' );
+	const [ imageProtocol, setImageProtocol ] = useState( provider.image_protocol || 'none' );
+	const [ imageModel, setImageModel ] = useState( provider.image_model || '' );
 	const modelsFetchedRef = useRef( '' );
 
 	// Sync with provider prop.
@@ -183,6 +185,8 @@ function ProviderCard( {
 		setTimeout( provider.timeout ?? 360 );
 		setEnabled( provider.enabled ?? true );
 		setEndpointType( provider.endpoint_type || 'generic' );
+		setImageProtocol( provider.image_protocol || 'none' );
+		setImageModel( provider.image_model || '' );
 	}, [ provider ] );
 
 	const modelOptions = [
@@ -359,6 +363,35 @@ function ProviderCard( {
 							) }
 							<SelectControl
 								__nextHasNoMarginBottom
+								label={ __( 'Image generation protocol' ) }
+								value={ imageProtocol }
+								options={ [
+									{ label: __( 'Disabled' ), value: 'none' },
+									{ label: __( 'OpenAI Images API (/images/generations)' ), value: 'openai' },
+									{ label: __( 'Chat Completions image response' ), value: 'chat_completions' },
+								] }
+								onChange={ ( value ) => {
+									setImageProtocol( value );
+									handleChange( 'image_protocol', value );
+								} }
+								disabled={ isSaving }
+								help={ __( 'Enable only when this provider has a configured image model. Protocol selection prevents requests from being sent to the wrong endpoint.' ) }
+							/>
+							{ imageProtocol !== 'none' && (
+								<SelectControl
+									__nextHasNoMarginBottom
+									label={ __( 'Image generation model' ) }
+									value={ imageModel }
+									options={ [ { label: __( 'Select a model' ), value: '' }, ...( models || [] ).map( ( m ) => ( { label: m.name || m.id, value: m.id } ) ) ] }
+									onChange={ ( value ) => {
+										setImageModel( value );
+										handleChange( 'image_model', value );
+									} }
+									disabled={ isSaving }
+								/>
+							) }
+							<SelectControl
+								__nextHasNoMarginBottom
 								label={ __( 'Endpoint type' ) }
 								value={ endpointType }
 								options={ [
@@ -438,7 +471,7 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 	const fetchSettings = useCallback( async () => {
 		try {
 			const settings = await apiFetch( {
-				path: '/wp/v2/settings?_fields=ultimate_ai_connector_providers,ultimate_ai_connector_provider_order',
+				path: '/wp/v2/settings?_fields=ultimate_ai_connector_providers,ultimate_ai_connector_provider_order,ultimate_ai_connector_endpoint_url,ultimate_ai_connector_api_key,ultimate_ai_connector_default_model,ultimate_ai_connector_timeout,ultimate_ai_connector_image_protocol,ultimate_ai_connector_image_model',
 			} );
 			const loadedProviders = settings.ultimate_ai_connector_providers || [];
 			const loadedOrder = settings.ultimate_ai_connector_provider_order || [];
@@ -454,6 +487,8 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 					default_model: settings.ultimate_ai_connector_default_model || '',
 					timeout: settings.ultimate_ai_connector_timeout || 360,
 					enabled: true,
+					image_protocol: settings.ultimate_ai_connector_image_protocol || 'none',
+					image_model: settings.ultimate_ai_connector_image_model || '',
 				} ] );
 			} else {
 				setProviders( loadedProviders );
@@ -554,6 +589,8 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 			timeout: 360,
 			enabled: true,
 			endpoint_type: 'generic',
+			image_protocol: 'none',
+			image_model: '',
 			_new: true, // signals ProviderCard to start expanded
 		};
 		setProviders( ( prev ) => [ ...prev, newProvider ] );

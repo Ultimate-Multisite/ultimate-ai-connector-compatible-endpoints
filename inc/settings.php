@@ -31,6 +31,8 @@ function get_default_provider_config( array $config = [] ): array {
 			'timeout'      => 360,
 			'enabled'      => true,
 			'endpoint_type' => 'generic',
+			'image_protocol' => 'none',
+			'image_model'    => '',
 		]
 	);
 }
@@ -43,9 +45,14 @@ function get_default_provider_config( array $config = [] ): array {
  */
 function sanitize_provider_config( array $config ): array {
 	$allowed_endpoint_types = [ 'generic', 'deepseek', 'ollama' ];
+	$allowed_image_protocols = [ 'none', 'openai', 'chat_completions' ];
 	$endpoint_type          = sanitize_text_field( $config['endpoint_type'] ?? 'generic' );
+	$image_protocol         = sanitize_text_field( $config['image_protocol'] ?? 'none' );
 	if ( ! in_array( $endpoint_type, $allowed_endpoint_types, true ) ) {
 		$endpoint_type = 'generic';
+	}
+	if ( ! in_array( $image_protocol, $allowed_image_protocols, true ) ) {
+		$image_protocol = 'none';
 	}
 
 	return [
@@ -57,6 +64,8 @@ function sanitize_provider_config( array $config ): array {
 		'timeout'      => absint( $config['timeout'] ?? 360 ),
 		'enabled'     => (bool) ( $config['enabled'] ?? true ),
 		'endpoint_type' => $endpoint_type,
+		'image_protocol' => $image_protocol,
+		'image_model'    => sanitize_text_field( $config['image_model'] ?? '' ),
 	];
 }
 
@@ -145,6 +154,31 @@ function register_settings(): void {
 		]
 	);
 
+	register_setting(
+		'ultimate_ai_connector',
+		'ultimate_ai_connector_image_protocol',
+		[
+			'type' => 'string',
+			'sanitize_callback' => static function ( $value ): string {
+				$value = sanitize_text_field( $value );
+				return in_array( $value, [ 'none', 'openai', 'chat_completions' ], true ) ? $value : 'none';
+			},
+			'default' => 'none',
+			'show_in_rest' => true,
+		]
+	);
+
+	register_setting(
+		'ultimate_ai_connector',
+		'ultimate_ai_connector_image_model',
+		[
+			'type' => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default' => '',
+			'show_in_rest' => true,
+		]
+	);
+
 	// Multi-provider settings (v2.0.0+).
 	register_setting(
 		'ultimate_ai_connector',
@@ -170,6 +204,11 @@ function register_settings(): void {
 								'type' => 'string',
 								'enum' => [ 'generic', 'deepseek', 'ollama' ],
 							],
+							'image_protocol' => [
+								'type' => 'string',
+								'enum' => [ 'none', 'openai', 'chat_completions' ],
+							],
+							'image_model' => [ 'type' => 'string' ],
 						],
 					],
 				],

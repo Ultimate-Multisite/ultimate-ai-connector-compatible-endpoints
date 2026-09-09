@@ -57,6 +57,12 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 	 */
 	private string $defaultModel = '';
 
+	/** @var string Image generation protocol for the explicitly selected model. */
+	private string $imageProtocol = 'none';
+
+	/** @var string Explicitly configured image generation model ID. */
+	private string $imageModel = '';
+
 	/**
 	 * Request-local model metadata cache.
 	 *
@@ -72,13 +78,17 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 
 	/**
 	 * @param string $endpointUrl  Base URL of the AI endpoint (no trailing slash).
-	 * @param string $defaultModel Default model ID to sort first in listings.
+	 * @param string $defaultModel  Default model ID to sort first in listings.
+	 * @param string $imageProtocol Image generation protocol for $imageModel.
+	 * @param string $imageModel    Explicit image generation model ID.
 	 */
-	public function __construct( string $endpointUrl = '', string $defaultModel = '' ) {
+	public function __construct( string $endpointUrl = '', string $defaultModel = '', string $imageProtocol = 'none', string $imageModel = '' ) {
 		$this->endpointUrl = $endpointUrl !== ''
 			? rtrim( $endpointUrl, '/' )
 			: rtrim( CompatibleEndpointProvider::$endpointUrl, '/' );
 		$this->defaultModel = $defaultModel;
+		$this->imageProtocol = $imageProtocol;
+		$this->imageModel    = $imageModel;
 	}
 
 	/**
@@ -219,12 +229,11 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 	 * @return array<string, ModelMetadata> Map of model ID to model metadata.
 	 */
 	private function buildModelMetadataMapFromRaw( array $raw ): array {
-		$capabilities = [
+		$text_capabilities = [
 			CapabilityEnum::textGeneration(),
 			CapabilityEnum::chatHistory(),
 		];
-
-		$options = [
+		$text_options = [
 			new SupportedOption( OptionEnum::systemInstruction() ),
 			new SupportedOption( OptionEnum::maxTokens() ),
 			new SupportedOption( OptionEnum::temperature() ),
@@ -246,7 +255,7 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 			$id   = (string) ( $item['id'] ?? '' );
 			$name = (string) ( $item['name'] ?? $id );
 			if ( '' !== $id ) {
-				$map[ $id ] = new ModelMetadata( $id, $name, $capabilities, $options );
+				$map[ $id ] = new ModelMetadata( $id, $name, $this->getCapabilitiesForModel( $id, $text_capabilities ), $this->getOptionsForModel( $id, $text_options ) );
 			}
 		}
 
@@ -278,12 +287,12 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 			return [];
 		}
 
-		$capabilities = [
+		$text_capabilities = [
 			CapabilityEnum::textGeneration(),
 			CapabilityEnum::chatHistory(),
 		];
 
-		$options = [
+		$text_options = [
 			new SupportedOption( OptionEnum::systemInstruction() ),
 			new SupportedOption( OptionEnum::maxTokens() ),
 			new SupportedOption( OptionEnum::temperature() ),
@@ -306,14 +315,51 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 
 		return array_values(
 			array_map(
-				static function ( array $modelData ) use ( $capabilities, $options ): ModelMetadata {
+				function ( array $modelData ) use ( $text_capabilities, $text_options ): ModelMetadata {
 					$id   = $modelData['id'] ?? $modelData['name'] ?? 'unknown';
 					$name = $modelData['name'] ?? $modelData['id'] ?? $id;
 
-					return new ModelMetadata( $id, $name, $capabilities, $options );
+					return new ModelMetadata( $id, $name, $this->getCapabilitiesForModel( $id, $text_capabilities ), $this->getOptionsForModel( $id, $text_options ) );
 				},
 				$modelsData
 			)
 		);
+	}
+
+	/**
+	 * Returns the explicitly configured capabilities for a model.
+	 *
+	 * @param string $model_id          Model identifier.
+	 * @param array  $text_capabilities Text model capabilities.
+	 * @return array Model capabilities.
+	 */
+	private function getCapabilitiesForModel( string $model_id, array $text_capabilities ): array {
+		if ( $model_id === $this->imageModel && 'none' !== $this->imageProtocol ) {
+			return [ CapabilityEnum::imageGeneration() ];
+		}
+
+		return $text_capabilities;
+	}
+
+	/**
+	 * Returns options appropriate for the configured model capability.
+	 *
+	 * @param string $model_id     Model identifier.
+	 * @param array  $text_options Text model options.
+	 * @return array Model options.
+	 */
+	private function getOptionsForModel( string $model_id, array $text_options ): array {
+		if ( $model_id === $this->imageModel && 'none' !== $this->imageProtocol ) {
+			return [
+				new SupportedOption( OptionEnum::candidateCount() ),
+				new SupportedOption( OptionEnum::outputFileType() ),
+				new SupportedOption( OptionEnum::outputMimeType() ),
+				new SupportedOption( OptionEnum::outputMediaAspectRatio() ),
+				new SupportedOption( OptionEnum::outputMediaOrientation() ),
+				new SupportedOption( OptionEnum::customOptions() ),
+			];
+		}
+
+		return $text_options;
 	}
 }
