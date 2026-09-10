@@ -181,13 +181,19 @@ function rest_list_models( \WP_REST_Request $request ) {
 		$models_data = $body['models'];
 	}
 
+	$image_model = '';
+	if ( is_array( $resolved ) && 'none' !== ( $resolved['image_protocol'] ?? 'none' ) ) {
+		$image_model = (string) ( $resolved['image_model'] ?? '' );
+	}
+
 	$models = array_map(
-		static function ( array $model ): array {
+		static function ( array $model ) use ( $image_model ): array {
 			$id   = $model['id'] ?? $model['name'] ?? 'unknown';
 			$name = $model['name'] ?? $model['id'] ?? $id;
 			return [
-				'id'   => $id,
-				'name' => $name,
+				'id'           => $id,
+				'name'         => $name,
+				'capabilities' => [ $id === $image_model ? 'image_generation' : 'text_generation' ],
 			];
 		},
 		$models_data

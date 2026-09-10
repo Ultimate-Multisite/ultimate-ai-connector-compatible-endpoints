@@ -48,6 +48,24 @@ class ImageGenerationTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Native SDK enums may expose convenience checks through __call().
+	 */
+	public function test_magic_sdk_capability_is_treated_as_image_generation(): void {
+		$native_sdk_capability = new class() {
+			/**
+			 * Returns the enum value.
+			 */
+			public function __toString(): string {
+				return 'image_generation';
+			}
+		};
+
+		$this->assertTrue(
+			\UltimateAiConnectorCompatibleEndpoints\is_image_generation_capability( $native_sdk_capability )
+		);
+	}
+
+	/**
 	 * Invalid protocols are disabled while valid values and model IDs survive sanitization.
 	 */
 	public function test_image_protocol_sanitization(): void {
