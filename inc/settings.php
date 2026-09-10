@@ -14,6 +14,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Checks whether an SDK capability represents image generation.
+ *
+ * Older AI Client SDK releases do not provide isImageGeneration().
+ *
+ * @param object $capability SDK capability enum value.
+ * @return bool True for an image-generation capability.
+ */
+function is_image_generation_capability( object $capability ): bool {
+	return method_exists( $capability, 'isImageGeneration' ) && $capability->isImageGeneration();
+}
+
+/**
  * Default provider configuration structure.
  *
  * @param array $config Provider config array.

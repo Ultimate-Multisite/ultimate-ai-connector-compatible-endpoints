@@ -18,6 +18,36 @@ use WP_UnitTestCase;
 class ImageGenerationTest extends WP_UnitTestCase {
 
 	/**
+	 * Text-only SDK versions must be able to load the registration helpers.
+	 */
+	public function test_registration_helper_ignores_missing_image_sdk_abstraction(): void {
+		$registration_file = dirname( __DIR__, 2 ) . '/inc/provider-registration.php';
+		$script            = sprintf(
+			'define( "ABSPATH", __DIR__ ); require %s; \\UltimateAiConnectorCompatibleEndpoints\\register_image_endpoint_url( "test-provider", "https://example.test/v1" );',
+			var_export( $registration_file, true )
+		);
+		$command           = escapeshellarg( PHP_BINARY ) . ' -d display_errors=1 -r ' . escapeshellarg( $script ) . ' 2>&1';
+		$output            = [];
+		$exit_code         = 0;
+
+		exec( $command, $output, $exit_code );
+
+		$this->assertSame( 0, $exit_code, implode( PHP_EOL, $output ) );
+	}
+
+	/**
+	 * Text capabilities from older SDKs do not expose isImageGeneration().
+	 */
+	public function test_older_sdk_capability_is_not_treated_as_image_generation(): void {
+		$old_sdk_capability = new class() {
+		};
+
+		$this->assertFalse(
+			\UltimateAiConnectorCompatibleEndpoints\is_image_generation_capability( $old_sdk_capability )
+		);
+	}
+
+	/**
 	 * Invalid protocols are disabled while valid values and model IDs survive sanitization.
 	 */
 	public function test_image_protocol_sanitization(): void {

@@ -99,7 +99,7 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 	): ModelInterface {
 		$capabilities = $modelMetadata->getSupportedCapabilities();
 		foreach ( $capabilities as $capability ) {
-			if ( $capability->isImageGeneration() ) {
+			if ( is_image_generation_capability( $capability ) ) {
 				if ( 'openai' === static::$imageProtocol ) {
 					return new CompatibleEndpointImageModel( $modelMetadata, $providerMetadata );
 				}
@@ -320,7 +320,7 @@ class ProviderFactory {
 		// thinking-mode wire format (reasoning_content / thinking / none).
 		$endpoint_type = $config['endpoint_type'] ?? 'generic';
 		CompatibleEndpointModel::registerEndpointType( $sdk_provider_id, $endpoint_type );
-		CompatibleEndpointImageModel::registerEndpointUrl( $sdk_provider_id, $config['endpoint_url'] );
+		register_image_endpoint_url( $sdk_provider_id, $config['endpoint_url'] );
 
 		// Set API key authentication.
 		$api_key = $config['api_key'] ?? '';

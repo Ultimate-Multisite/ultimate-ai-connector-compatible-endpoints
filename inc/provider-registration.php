@@ -70,7 +70,7 @@ function register_provider(): void {
 	CompatibleEndpointProvider::$defaultModel = (string) get_option( 'ultimate_ai_connector_default_model', '' );
 	CompatibleEndpointProvider::$imageProtocol = (string) get_option( 'ultimate_ai_connector_image_protocol', 'none' );
 	CompatibleEndpointProvider::$imageModel = (string) get_option( 'ultimate_ai_connector_image_model', '' );
-	CompatibleEndpointImageModel::registerEndpointUrl( 'ultimate-ai-connector-compatible-endpoints', $endpoint_url );
+	register_image_endpoint_url( 'ultimate-ai-connector-compatible-endpoints', $endpoint_url );
 
 	$registry = AiClient::defaultRegistry();
 
@@ -94,6 +94,23 @@ function register_provider(): void {
 	// Mark as configured so the WP 7.0 connector system and AI plugin
 	// recognise this connector as having valid credentials.
 	mark_connector_configured();
+}
+
+/**
+ * Registers an endpoint URL with the optional image model implementation.
+ *
+ * The image-generation abstraction is unavailable in older AI Client SDK
+ * versions. Keep text-only provider registration working in that environment.
+ *
+ * @param string $sdk_provider_id SDK provider ID.
+ * @param string $endpoint_url Endpoint base URL.
+ */
+function register_image_endpoint_url( string $sdk_provider_id, string $endpoint_url ): void {
+	if ( ! class_exists( CompatibleEndpointImageModel::class ) ) {
+		return;
+	}
+
+	CompatibleEndpointImageModel::registerEndpointUrl( $sdk_provider_id, $endpoint_url );
 }
 
 /**
