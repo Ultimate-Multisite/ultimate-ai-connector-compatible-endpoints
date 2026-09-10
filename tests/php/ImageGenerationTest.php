@@ -86,6 +86,8 @@ class ImageGenerationTest extends WP_UnitTestCase {
 		);
 		$method = new \ReflectionMethod( $directory, 'getCapabilitiesForModel' );
 		$method->setAccessible( true );
+		$options_method = new \ReflectionMethod( $directory, 'getOptionsForModel' );
+		$options_method->setAccessible( true );
 		$text_capabilities = [
 			\WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::textGeneration(),
 			\WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::chatHistory(),
@@ -95,6 +97,29 @@ class ImageGenerationTest extends WP_UnitTestCase {
 		$normal_capabilities = $method->invoke( $directory, 'chat-model', $text_capabilities );
 		$this->assertTrue( $image_capabilities[0]->isImageGeneration() );
 		$this->assertTrue( $normal_capabilities[0]->isTextGeneration() );
+
+		$image_options = $options_method->invoke( $directory, 'image-model', [] );
+		$metadata      = new \WordPress\AiClient\Providers\Models\DTO\ModelMetadata(
+			'image-model',
+			'Image model',
+			$image_capabilities,
+			$image_options
+		);
+		$model_config  = new \WordPress\AiClient\Providers\Models\DTO\ModelConfig();
+		$model_config->setOutputModalities(
+			[ \WordPress\AiClient\Messages\Enums\ModalityEnum::image() ]
+		);
+		$requirements  = \WordPress\AiClient\Providers\Models\DTO\ModelRequirements::fromPromptData(
+			\WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::imageGeneration(),
+			[
+				new \WordPress\AiClient\Messages\DTO\UserMessage(
+					[ new \WordPress\AiClient\Messages\DTO\MessagePart( 'Generate an image.' ) ]
+				),
+			],
+			$model_config
+		);
+
+		$this->assertTrue( $requirements->areMetBy( $metadata ) );
 	}
 
 	/**

@@ -351,6 +351,10 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 	private function getOptionsForModel( string $model_id, array $text_options ): array {
 		if ( $model_id === $this->imageModel && 'none' !== $this->imageProtocol && $this->supportsImageGeneration() ) {
 			return [
+				// The SDK derives input and output modality requirements from the
+				// prompt. Advertise both so it can select this image model.
+				new SupportedOption( OptionEnum::inputModalities() ),
+				new SupportedOption( OptionEnum::outputModalities() ),
 				new SupportedOption( OptionEnum::candidateCount() ),
 				new SupportedOption( OptionEnum::outputFileType() ),
 				new SupportedOption( OptionEnum::outputMimeType() ),
