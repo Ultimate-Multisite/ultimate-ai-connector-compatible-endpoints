@@ -60,6 +60,8 @@ class MultiProviderRoutingTest extends WP_UnitTestCase {
 		delete_option( 'ultimate_ai_connector_provider_order' );
 		delete_option( 'ultimate_ai_connector_endpoint_url' );
 		delete_option( 'ultimate_ai_connector_api_key' );
+		delete_option( 'ultimate_ai_connector_image_protocol' );
+		delete_option( 'ultimate_ai_connector_image_model' );
 		remove_all_filters( 'pre_http_request' );
 		$this->captured_urls    = [];
 		$this->captured_headers = [];
@@ -248,6 +250,8 @@ class MultiProviderRoutingTest extends WP_UnitTestCase {
 		// Each provider returns its OWN distinct model set.
 		$this->assertSame( [ 'alpha-model-1', 'alpha-model-2' ], $alpha_ids );
 		$this->assertSame( [ 'beta-only-model' ], $beta_ids );
+		$this->assertSame( [ 'text_generation' ], $alpha_data[0]['capabilities'] );
+		$this->assertSame( [ 'text_generation' ], $beta_data[0]['capabilities'] );
 
 		// Each request hit its own /models URL.
 		$this->assertContains( 'http://alpha.example.test/v1/models', $this->captured_urls );
@@ -256,6 +260,25 @@ class MultiProviderRoutingTest extends WP_UnitTestCase {
 			'Bearer beta-key',
 			$this->captured_headers['https://beta.example.test/v1/models']['Authorization'] ?? ''
 		);
+	}
+
+	/**
+	 * Model-list consumers can distinguish the configured image model from text models.
+	 */
+	public function test_rest_list_models_exposes_model_capabilities(): void {
+		$this->set_up_two_providers();
+		$providers                      = get_option( 'ultimate_ai_connector_providers' );
+		$providers[0]['image_protocol'] = 'chat_completions';
+		$providers[0]['image_model']    = 'alpha-model-1';
+		update_option( 'ultimate_ai_connector_providers', $providers );
+
+		$request = new WP_REST_Request( 'GET' );
+		$request->set_param( 'provider_id', 'ai-provider-for-any-openai-compatible' );
+		$response = \UltimateAiConnectorCompatibleEndpoints\rest_list_models( $request );
+		$models   = $response->get_data();
+
+		$this->assertSame( [ 'image_generation' ], $models[0]['capabilities'] );
+		$this->assertSame( [ 'text_generation' ], $models[1]['capabilities'] );
 	}
 
 	/**
@@ -369,6 +392,36 @@ class MultiProviderRoutingTest extends WP_UnitTestCase {
 		$this->assertSame(
 			[ 'alpha-model-1', 'alpha-model-2' ],
 			array_column( $resp->get_data(), 'id' )
+		);
+	}
+
+	/**
+	 * Legacy single-provider settings identify the configured image model.
+	 */
+	public function test_rest_list_models_uses_legacy_image_model_capability(): void {
+		update_option( 'ultimate_ai_connector_endpoint_url', 'http://legacy.example.test/v1' );
+		update_option( 'ultimate_ai_connector_api_key', 'legacy-key' );
+		update_option( 'ultimate_ai_connector_image_protocol', 'chat_completions' );
+		update_option( 'ultimate_ai_connector_image_model', 'legacy-image-model' );
+		$this->stub_responses = [
+			'http://legacy.example.test/v1/models' => [
+				[ 'id' => 'legacy-text-model', 'name' => 'Legacy text model' ],
+				[ 'id' => 'legacy-image-model', 'name' => 'Legacy image model' ],
+			],
+		];
+		add_filter( 'pre_http_request', [ $this, 'short_circuit_http' ], 10, 3 );
+
+		$response = \UltimateAiConnectorCompatibleEndpoints\rest_list_models( new WP_REST_Request( 'GET' ) );
+		$models   = [];
+		foreach ( $response->get_data() as $model ) {
+			$models[ $model['id'] ] = $model;
+		}
+
+		$this->assertSame( [ 'image_generation' ], $models['legacy-image-model']['capabilities'] );
+		$this->assertSame( [ 'text_generation' ], $models['legacy-text-model']['capabilities'] );
+		$this->assertSame(
+			'Bearer legacy-key',
+			$this->captured_headers['http://legacy.example.test/v1/models']['Authorization'] ?? ''
 		);
 	}
 

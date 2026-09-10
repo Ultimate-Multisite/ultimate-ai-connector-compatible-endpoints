@@ -65,7 +65,7 @@ class CompatibleEndpointProvider extends AbstractApiProvider {
 	): ModelInterface {
 		$capabilities = $modelMetadata->getSupportedCapabilities();
 		foreach ( $capabilities as $capability ) {
-			if ( $capability->isImageGeneration() ) {
+			if ( is_image_generation_capability( $capability ) ) {
 				if ( 'chat_completions' === self::$imageProtocol ) {
 					return new CompatibleEndpointChatImageModel( $modelMetadata, $providerMetadata );
 				}

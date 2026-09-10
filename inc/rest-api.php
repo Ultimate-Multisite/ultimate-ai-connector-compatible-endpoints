@@ -90,7 +90,16 @@ function rest_list_models( \WP_REST_Request $request ) {
 			$endpoint_url = $resolved['endpoint_url'] ?? '';
 		} else {
 			// Fall back to legacy single-provider option.
-			$endpoint_url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
+			$legacy_endpoint_url = (string) get_option( 'ultimate_ai_connector_endpoint_url', '' );
+			if ( '' !== $legacy_endpoint_url ) {
+				$resolved = [
+					'endpoint_url'  => $legacy_endpoint_url,
+					'api_key'       => (string) get_option( 'ultimate_ai_connector_api_key', '' ),
+					'image_protocol' => (string) get_option( 'ultimate_ai_connector_image_protocol', 'none' ),
+					'image_model'    => (string) get_option( 'ultimate_ai_connector_image_model', '' ),
+				];
+				$endpoint_url = $legacy_endpoint_url;
+			}
 		}
 	}
 
@@ -181,13 +190,19 @@ function rest_list_models( \WP_REST_Request $request ) {
 		$models_data = $body['models'];
 	}
 
+	$image_model = '';
+	if ( is_array( $resolved ) && 'none' !== ( $resolved['image_protocol'] ?? 'none' ) ) {
+		$image_model = (string) ( $resolved['image_model'] ?? '' );
+	}
+
 	$models = array_map(
-		static function ( array $model ): array {
+		static function ( array $model ) use ( $image_model ): array {
 			$id   = $model['id'] ?? $model['name'] ?? 'unknown';
 			$name = $model['name'] ?? $model['id'] ?? $id;
 			return [
-				'id'   => $id,
-				'name' => $name,
+				'id'           => $id,
+				'name'         => $name,
+				'capabilities' => [ $id === $image_model ? 'image_generation' : 'text_generation' ],
 			];
 		},
 		$models_data
