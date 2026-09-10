@@ -90,7 +90,16 @@ function rest_list_models( \WP_REST_Request $request ) {
 			$endpoint_url = $resolved['endpoint_url'] ?? '';
 		} else {
 			// Fall back to legacy single-provider option.
-			$endpoint_url = get_option( 'ultimate_ai_connector_endpoint_url', '' );
+			$legacy_endpoint_url = (string) get_option( 'ultimate_ai_connector_endpoint_url', '' );
+			if ( '' !== $legacy_endpoint_url ) {
+				$resolved = [
+					'endpoint_url'  => $legacy_endpoint_url,
+					'api_key'       => (string) get_option( 'ultimate_ai_connector_api_key', '' ),
+					'image_protocol' => (string) get_option( 'ultimate_ai_connector_image_protocol', 'none' ),
+					'image_model'    => (string) get_option( 'ultimate_ai_connector_image_model', '' ),
+				];
+				$endpoint_url = $legacy_endpoint_url;
+			}
 		}
 	}
 
