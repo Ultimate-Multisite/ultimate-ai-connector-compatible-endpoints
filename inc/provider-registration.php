@@ -67,10 +67,10 @@ function register_provider(): void {
 	}
 
 	// Set the base URL and default model before any SDK method can call baseUrl().
-	CompatibleEndpointProvider::$endpointUrl = $endpoint_url;
-	CompatibleEndpointProvider::$defaultModel = (string) get_option( 'ultimate_ai_connector_default_model', '' );
+	CompatibleEndpointProvider::$endpointUrl   = $endpoint_url;
+	CompatibleEndpointProvider::$defaultModel  = (string) get_option( 'ultimate_ai_connector_default_model', '' );
 	CompatibleEndpointProvider::$imageProtocol = (string) get_option( 'ultimate_ai_connector_image_protocol', 'none' );
-	CompatibleEndpointProvider::$imageModel = (string) get_option( 'ultimate_ai_connector_image_model', '' );
+	CompatibleEndpointProvider::$imageModel    = (string) get_option( 'ultimate_ai_connector_image_model', '' );
 	register_image_endpoint_url( 'ultimate-ai-connector-compatible-endpoints', $endpoint_url );
 
 	$registry = AiClient::defaultRegistry();
@@ -111,10 +111,10 @@ function register_canonical_provider(): void {
 		return;
 	}
 
-	CompatibleEndpointProvider::$endpointUrl = (string) $primary['endpoint_url'];
-	CompatibleEndpointProvider::$defaultModel = (string) ( $primary['default_model'] ?? '' );
+	CompatibleEndpointProvider::$endpointUrl   = (string) $primary['endpoint_url'];
+	CompatibleEndpointProvider::$defaultModel  = (string) ( $primary['default_model'] ?? '' );
 	CompatibleEndpointProvider::$imageProtocol = (string) ( $primary['image_protocol'] ?? 'none' );
-	CompatibleEndpointProvider::$imageModel = (string) ( $primary['image_model'] ?? '' );
+	CompatibleEndpointProvider::$imageModel    = (string) ( $primary['image_model'] ?? '' );
 	CompatibleEndpointModel::registerEndpointUrl( CONNECTOR_SLUG, (string) $primary['endpoint_url'] );
 	CompatibleEndpointModel::registerEndpointType( CONNECTOR_SLUG, (string) ( $primary['endpoint_type'] ?? 'generic' ) );
 	register_image_endpoint_url( CONNECTOR_SLUG, (string) $primary['endpoint_url'] );

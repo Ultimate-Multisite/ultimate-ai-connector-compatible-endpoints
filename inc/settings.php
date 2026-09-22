@@ -41,14 +41,14 @@ function get_default_provider_config( array $config = [] ): array {
 	return wp_parse_args(
 		$config,
 		[
-			'id'            => '',
-			'name'          => '',
+			'id'             => '',
+			'name'           => '',
 			'endpoint_url'   => '',
-			'api_key'       => '',
-			'default_model' => '',
-			'timeout'      => 360,
-			'enabled'      => true,
-			'endpoint_type' => 'generic',
+			'api_key'        => '',
+			'default_model'  => '',
+			'timeout'        => 360,
+			'enabled'        => true,
+			'endpoint_type'  => 'generic',
 			'image_protocol' => 'none',
 			'image_model'    => '',
 		]
@@ -62,10 +62,10 @@ function get_default_provider_config( array $config = [] ): array {
  * @return array Sanitized config.
  */
 function sanitize_provider_config( array $config ): array {
-	$allowed_endpoint_types = [ 'generic', 'deepseek', 'ollama' ];
+	$allowed_endpoint_types  = [ 'generic', 'deepseek', 'ollama' ];
 	$allowed_image_protocols = [ 'none', 'openai', 'chat_completions' ];
-	$endpoint_type          = sanitize_text_field( $config['endpoint_type'] ?? 'generic' );
-	$image_protocol         = sanitize_text_field( $config['image_protocol'] ?? 'none' );
+	$endpoint_type           = sanitize_text_field( $config['endpoint_type'] ?? 'generic' );
+	$image_protocol          = sanitize_text_field( $config['image_protocol'] ?? 'none' );
 	if ( ! in_array( $endpoint_type, $allowed_endpoint_types, true ) ) {
 		$endpoint_type = 'generic';
 	}
@@ -74,14 +74,14 @@ function sanitize_provider_config( array $config ): array {
 	}
 
 	return [
-		'id'            => sanitize_text_field( $config['id'] ?? '' ),
-		'name'          => sanitize_text_field( $config['name'] ?? '' ),
-		'endpoint_url'  => esc_url_raw( $config['endpoint_url'] ?? '' ),
-		'api_key'      => sanitize_text_field( $config['api_key'] ?? '' ),
-		'default_model' => sanitize_text_field( $config['default_model'] ?? '' ),
-		'timeout'      => absint( $config['timeout'] ?? 360 ),
-		'enabled'     => (bool) ( $config['enabled'] ?? true ),
-		'endpoint_type' => $endpoint_type,
+		'id'             => sanitize_text_field( $config['id'] ?? '' ),
+		'name'           => sanitize_text_field( $config['name'] ?? '' ),
+		'endpoint_url'   => esc_url_raw( $config['endpoint_url'] ?? '' ),
+		'api_key'        => sanitize_text_field( $config['api_key'] ?? '' ),
+		'default_model'  => sanitize_text_field( $config['default_model'] ?? '' ),
+		'timeout'        => absint( $config['timeout'] ?? 360 ),
+		'enabled'        => (bool) ( $config['enabled'] ?? true ),
+		'endpoint_type'  => $endpoint_type,
 		'image_protocol' => $image_protocol,
 		'image_model'    => sanitize_text_field( $config['image_model'] ?? '' ),
 	];
@@ -176,13 +176,13 @@ function register_settings(): void {
 		'ultimate_ai_connector',
 		'ultimate_ai_connector_image_protocol',
 		[
-			'type' => 'string',
+			'type'              => 'string',
 			'sanitize_callback' => static function ( $value ): string {
 				$value = sanitize_text_field( $value );
 				return in_array( $value, [ 'none', 'openai', 'chat_completions' ], true ) ? $value : 'none';
 			},
-			'default' => 'none',
-			'show_in_rest' => true,
+			'default'           => 'none',
+			'show_in_rest'      => true,
 		]
 	);
 
@@ -190,10 +190,10 @@ function register_settings(): void {
 		'ultimate_ai_connector',
 		'ultimate_ai_connector_image_model',
 		[
-			'type' => 'string',
+			'type'              => 'string',
 			'sanitize_callback' => 'sanitize_text_field',
-			'default' => '',
-			'show_in_rest' => true,
+			'default'           => '',
+			'show_in_rest'      => true,
 		]
 	);
 
@@ -211,14 +211,14 @@ function register_settings(): void {
 					'items' => [
 						'type'       => 'object',
 						'properties' => [
-							'id'            => [ 'type' => 'string' ],
-							'name'          => [ 'type' => 'string' ],
-							'endpoint_url'  => [ 'type' => 'string' ],
-							'api_key'     => [ 'type' => 'string' ],
-							'default_model' => [ 'type' => 'string' ],
-							'timeout'     => [ 'type' => 'integer' ],
-							'enabled'      => [ 'type' => 'boolean' ],
-							'endpoint_type' => [
+							'id'             => [ 'type' => 'string' ],
+							'name'           => [ 'type' => 'string' ],
+							'endpoint_url'   => [ 'type' => 'string' ],
+							'api_key'        => [ 'type' => 'string' ],
+							'default_model'  => [ 'type' => 'string' ],
+							'timeout'        => [ 'type' => 'integer' ],
+							'enabled'        => [ 'type' => 'boolean' ],
+							'endpoint_type'  => [
 								'type' => 'string',
 								'enum' => [ 'generic', 'deepseek', 'ollama' ],
 							],
@@ -226,7 +226,7 @@ function register_settings(): void {
 								'type' => 'string',
 								'enum' => [ 'none', 'openai', 'chat_completions' ],
 							],
-							'image_model' => [ 'type' => 'string' ],
+							'image_model'    => [ 'type' => 'string' ],
 						],
 					],
 				],

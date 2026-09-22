@@ -10,6 +10,8 @@
 	"scripts": {
 		"build": "wp-scripts build",
 		"start": "wp-scripts start",
+		"lint:php": "composer lint",
+		"lint:php:fix": "composer phpcbf",
 		"archive": "composer archive --file=ultimate-ai-connector-compatible-endpoints --format=zip && rm -rf ultimate-ai-connector-compatible-endpoints && unzip ultimate-ai-connector-compatible-endpoints.zip -d ultimate-ai-connector-compatible-endpoints && rm ultimate-ai-connector-compatible-endpoints.zip && zip -r ultimate-ai-connector-compatible-endpoints.zip ultimate-ai-connector-compatible-endpoints && rm -rf ultimate-ai-connector-compatible-endpoints",
 		"release": "pnpm run build && pnpm run archive",
 		"test:e2e": "cypress run",
