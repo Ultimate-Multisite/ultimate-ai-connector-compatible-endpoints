@@ -174,6 +174,8 @@ class OrderedProviderTransporter implements HttpTransporterInterface {
 	 * Plain OpenAI-compatible requests can safely fall back across endpoint
 	 * types. Multi-turn thinking requests cannot: DeepSeek expects
 	 * `reasoning_content`, while Ollama expects `thinking`.
+	 *
+	 * @return string|null Endpoint type restriction, or null for unrestricted fallback.
 	 */
 	private function requestEndpointType( Request $request ): ?string {
 		$data = $request->getData();
@@ -237,6 +239,8 @@ function ordered_enabled_providers( ?string $endpoint_type = null ): array {
 
 /**
  * Returns the endpoint type used to prepare canonical provider requests.
+ *
+ * @return string Canonical endpoint type.
  */
 function canonical_endpoint_type(): string {
 	$primary = get_primary_provider();
