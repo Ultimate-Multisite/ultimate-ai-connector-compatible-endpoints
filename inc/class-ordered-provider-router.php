@@ -128,7 +128,7 @@ class OrderedProviderTransporter implements HttpTransporterInterface {
 	 * {@inheritDoc}
 	 */
 	public function send( Request $request, ?RequestOptions $options = null ): Response {
-		$providers = ordered_enabled_providers();
+		$providers = ordered_enabled_providers( $this->requestEndpointType( $request ) );
 		if ( empty( $providers ) ) {
 			return $this->transporter->send( $request, $options );
 		}
@@ -169,6 +169,36 @@ class OrderedProviderTransporter implements HttpTransporterInterface {
 	}
 
 	/**
+	 * Restricts fallback only when the payload uses an endpoint-specific field.
+	 *
+	 * Plain OpenAI-compatible requests can safely fall back across endpoint
+	 * types. Multi-turn thinking requests cannot: DeepSeek expects
+	 * `reasoning_content`, while Ollama expects `thinking`.
+	 */
+	private function requestEndpointType( Request $request ): ?string {
+		$data = $request->getData();
+		if ( null === $data && null !== $request->getBody() ) {
+			$decoded = json_decode( $request->getBody(), true );
+			$data    = is_array( $decoded ) ? $decoded : null;
+		}
+
+		if ( ! isset( $data['messages'] ) || ! is_array( $data['messages'] ) ) {
+			return null;
+		}
+
+		foreach ( $data['messages'] as $message ) {
+			if (
+				is_array( $message )
+				&& ( array_key_exists( 'reasoning_content', $message ) || array_key_exists( 'thinking', $message ) )
+			) {
+				return canonical_endpoint_type();
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Returns the operation suffix from the canonical request URL.
 	 */
 	private function requestPath( Request $request, string $primary_endpoint ): string {
@@ -186,17 +216,31 @@ class OrderedProviderTransporter implements HttpTransporterInterface {
 /**
  * Returns enabled providers in their configured fallback order.
  *
+ * @param string|null $endpoint_type Optional endpoint type to retain.
  * @return array<int, array<string, mixed>>
  */
-function ordered_enabled_providers(): array {
+function ordered_enabled_providers( ?string $endpoint_type = null ): array {
 	return array_values(
 		array_filter(
 			get_providers_ordered(),
-			static function ( array $provider ): bool {
-				return ! empty( $provider['endpoint_url'] ) && ( $provider['enabled'] ?? true );
+			static function ( array $provider ) use ( $endpoint_type ): bool {
+				if ( empty( $provider['endpoint_url'] ) || ! ( $provider['enabled'] ?? true ) ) {
+					return false;
+				}
+
+				return null === $endpoint_type
+					|| $endpoint_type === (string) ( $provider['endpoint_type'] ?? 'generic' );
 			}
 		)
 	);
+}
+
+/**
+ * Returns the endpoint type used to prepare canonical provider requests.
+ */
+function canonical_endpoint_type(): string {
+	$primary = get_primary_provider();
+	return (string) ( $primary['endpoint_type'] ?? 'generic' );
 }
 
 /**

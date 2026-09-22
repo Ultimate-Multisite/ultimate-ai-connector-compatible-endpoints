@@ -20,6 +20,7 @@ use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
 use WordPress\AiClient\Providers\Http\DTO\Response;
+use WordPress\AiClient\Providers\Http\Enums\HttpMethodEnum;
 
 use function UltimateAiConnectorCompatibleEndpoints\get_provider_by_sdk_id;
 use function UltimateAiConnectorCompatibleEndpoints\sdk_provider_id_for_index;
@@ -162,6 +163,137 @@ class MultiProviderRoutingTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Canonical fallback retains order while excluding incompatible wire formats.
+	 */
+	public function test_ordered_enabled_providers_match_primary_endpoint_type(): void {
+		if ( ! function_exists( 'UltimateAiConnectorCompatibleEndpoints\\ordered_enabled_providers' ) ) {
+			$this->markTestSkipped( 'AI Client SDK not available in this test environment.' );
+		}
+
+		update_option(
+			'ultimate_ai_connector_providers',
+			[
+				[
+					'id'            => 'generic-first',
+					'endpoint_url'  => 'https://first.example.test/v1',
+					'endpoint_type' => 'generic',
+					'enabled'       => true,
+				],
+				[
+					'id'            => 'ollama-middle',
+					'endpoint_url'  => 'https://middle.example.test/v1',
+					'endpoint_type' => 'ollama',
+					'enabled'       => true,
+				],
+				[
+					'id'            => 'generic-last',
+					'endpoint_url'  => 'https://last.example.test/v1',
+					'endpoint_type' => 'generic',
+					'enabled'       => true,
+				],
+			]
+		);
+
+		$providers = \UltimateAiConnectorCompatibleEndpoints\ordered_enabled_providers(
+			\UltimateAiConnectorCompatibleEndpoints\canonical_endpoint_type()
+		);
+
+		$this->assertSame( [ 'generic-first', 'generic-last' ], array_column( $providers, 'id' ) );
+	}
+
+	/**
+	 * Plain requests can cross endpoint types, but thinking payloads cannot.
+	 */
+	public function test_transporter_filters_endpoint_types_only_for_thinking_payloads(): void {
+		if (
+			! trait_exists( 'WordPress\\AiClient\\Providers\\Http\\Traits\\WithHttpTransporterTrait' )
+			|| ! trait_exists( 'WordPress\\AiClient\\Providers\\Http\\Traits\\WithRequestAuthenticationTrait' )
+			|| ! class_exists( 'UltimateAiConnectorCompatibleEndpoints\\OrderedProviderTransporter' )
+		) {
+			$this->markTestSkipped( 'AI Client SDK not available in this test environment.' );
+		}
+
+		update_option(
+			'ultimate_ai_connector_providers',
+			[
+				[
+					'id'            => 'deepseek-first',
+					'endpoint_url'  => 'https://first.example.test/v1',
+					'endpoint_type' => 'deepseek',
+					'enabled'       => true,
+				],
+				[
+					'id'            => 'ollama-middle',
+					'endpoint_url'  => 'https://middle.example.test/v1',
+					'endpoint_type' => 'ollama',
+					'enabled'       => true,
+				],
+				[
+					'id'            => 'deepseek-last',
+					'endpoint_url'  => 'https://last.example.test/v1',
+					'endpoint_type' => 'deepseek',
+					'enabled'       => true,
+				],
+			]
+		);
+
+		$attempts = [];
+		$transport = new class( $attempts ) implements HttpTransporterInterface {
+			/** @var list<string> */
+			public array $attempts = [];
+
+			/** @param list<string> $attempts Initial attempts. */
+			public function __construct( array &$attempts ) {
+				$this->attempts =& $attempts;
+			}
+
+			public function send( Request $request, ?RequestOptions $options = null ): Response {
+				$this->attempts[] = $request->getUri();
+				$status           = str_contains( $request->getUri(), 'first.example.test' ) ? 503 : 200;
+				return new Response( $status, [], '{}' );
+			}
+		};
+		$router = new \UltimateAiConnectorCompatibleEndpoints\OrderedProviderTransporter( $transport );
+
+		$router->send(
+			new Request(
+				HttpMethodEnum::POST(),
+				'https://first.example.test/v1/chat/completions',
+				[],
+				[ 'messages' => [ [ 'role' => 'user', 'content' => 'Hello' ] ] ]
+			)
+		);
+		$this->assertSame(
+			[
+				'https://first.example.test/v1/chat/completions',
+				'https://middle.example.test/v1/chat/completions',
+			],
+			$attempts
+		);
+
+		$attempts = [];
+		$router->send(
+			new Request(
+				HttpMethodEnum::POST(),
+				'https://first.example.test/v1/chat/completions',
+				[],
+				[
+					'messages' => [
+						[ 'role' => 'assistant', 'content' => '', 'reasoning_content' => 'Thought' ],
+					],
+				]
+			)
+		);
+		$this->assertSame(
+			[
+				'https://first.example.test/v1/chat/completions',
+				'https://last.example.test/v1/chat/completions',
+			],
+			$attempts
+		);
+	}
+
+	/**
 	 * The plugin slug is registered alongside the ai-agent-compatible IDs.
 	 */
 	public function test_registers_canonical_plugin_provider_key(): void {
@@ -183,7 +315,11 @@ class MultiProviderRoutingTest extends WP_UnitTestCase {
 	 * usingProvider() with the plugin slug retries endpoints in configured order.
 	 */
 	public function test_canonical_transporter_uses_ordered_endpoint_fallback(): void {
-		if ( ! class_exists( 'UltimateAiConnectorCompatibleEndpoints\\OrderedProviderTransporter' ) ) {
+		if (
+			! trait_exists( 'WordPress\\AiClient\\Providers\\Http\\Traits\\WithHttpTransporterTrait' )
+			|| ! trait_exists( 'WordPress\\AiClient\\Providers\\Http\\Traits\\WithRequestAuthenticationTrait' )
+			|| ! class_exists( 'UltimateAiConnectorCompatibleEndpoints\\OrderedProviderTransporter' )
+		) {
 			$this->markTestSkipped( 'AI Client SDK not available in this test environment.' );
 		}
 
