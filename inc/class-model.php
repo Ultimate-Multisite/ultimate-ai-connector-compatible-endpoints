@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Messages\Enums\MessageRoleEnum;
 use WordPress\AiClient\Providers\Http\DTO\Request;
+use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\Enums\HttpMethodEnum;
 use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCompatibleTextGenerationModel;
 
@@ -70,6 +71,22 @@ class CompatibleEndpointModel extends AbstractOpenAiCompatibleTextGenerationMode
 	 */
 	public static function registerEndpointType( string $sdk_provider_id, string $endpoint_type ): void {
 		self::$endpointTypes[ $sdk_provider_id ] = $endpoint_type;
+	}
+
+	/**
+	 * Wraps canonical-plugin requests with ordered endpoint failover.
+	 *
+	 * The per-endpoint SDK providers keep their direct transport. Only the
+	 * canonical plugin provider retries enabled endpoints in configured order.
+	 *
+	 * @param HttpTransporterInterface $httpTransporter SDK HTTP transporter.
+	 */
+	public function setHttpTransporter( HttpTransporterInterface $httpTransporter ): void {
+		if ( CONNECTOR_SLUG === $this->providerMetadata()->getId() ) {
+			$httpTransporter = new OrderedProviderTransporter( $httpTransporter );
+		}
+
+		parent::setHttpTransporter( $httpTransporter );
 	}
 
 	/**

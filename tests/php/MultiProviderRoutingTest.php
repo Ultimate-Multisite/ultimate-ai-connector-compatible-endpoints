@@ -16,6 +16,10 @@ namespace UltimateAiConnectorCompatibleEndpoints\Tests;
 
 use WP_UnitTestCase;
 use WP_REST_Request;
+use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
+use WordPress\AiClient\Providers\Http\DTO\Request;
+use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
+use WordPress\AiClient\Providers\Http\DTO\Response;
 
 use function UltimateAiConnectorCompatibleEndpoints\get_provider_by_sdk_id;
 use function UltimateAiConnectorCompatibleEndpoints\sdk_provider_id_for_index;
@@ -155,6 +159,116 @@ class MultiProviderRoutingTest extends WP_UnitTestCase {
 		$this->assertSame( 'ai-provider-for-any-openai-compatible', sdk_provider_id_for_index( 0 ) );
 		$this->assertSame( 'ai-provider-for-any-openai-compatible-2', sdk_provider_id_for_index( 1 ) );
 		$this->assertSame( 'ai-provider-for-any-openai-compatible-3', sdk_provider_id_for_index( 2 ) );
+	}
+
+	/**
+	 * The plugin slug is registered alongside the ai-agent-compatible IDs.
+	 */
+	public function test_registers_canonical_plugin_provider_key(): void {
+		if ( ! class_exists( 'WordPress\\AiClient\\AiClient' ) ) {
+			$this->markTestSkipped( 'AI Client SDK not available in this test environment.' );
+		}
+
+		$this->set_up_two_providers();
+		\UltimateAiConnectorCompatibleEndpoints\ProviderFactory::registerAllProviders();
+		\UltimateAiConnectorCompatibleEndpoints\register_canonical_provider();
+
+		$provider_ids = \WordPress\AiClient\AiClient::defaultRegistry()->getRegisteredProviderIds();
+		$this->assertContains( 'ultimate-ai-connector-compatible-endpoints', $provider_ids );
+		$this->assertContains( 'ai-provider-for-any-openai-compatible', $provider_ids );
+		$this->assertContains( 'ai-provider-for-any-openai-compatible-2', $provider_ids );
+	}
+
+	/**
+	 * usingProvider() with the plugin slug retries endpoints in configured order.
+	 */
+	public function test_canonical_transporter_uses_ordered_endpoint_fallback(): void {
+		if ( ! class_exists( 'UltimateAiConnectorCompatibleEndpoints\\OrderedProviderTransporter' ) ) {
+			$this->markTestSkipped( 'AI Client SDK not available in this test environment.' );
+		}
+
+		$this->set_up_two_providers();
+		$attempts = [];
+		$transport = new class( $attempts ) implements HttpTransporterInterface {
+			/** @var array<int, array{url: string, authorization: string}> */
+			public array $attempts = [];
+
+			/**
+			 * @param array<int, array{url: string, authorization: string}> $attempts Initial attempts.
+			 */
+			public function __construct( array &$attempts ) {
+				$this->attempts =& $attempts;
+			}
+
+			public function send( Request $request, ?RequestOptions $options = null ): Response {
+				$this->attempts[] = [
+					'url'           => $request->getUri(),
+					'authorization' => (string) $request->getHeaderAsString( 'Authorization' ),
+				];
+
+				if ( 0 === strpos( $request->getUri(), 'http://alpha.example.test' ) ) {
+					return new Response( 503, [], '{}' );
+				}
+
+				if ( '/models' === substr( $request->getUri(), -7 ) ) {
+					return new Response(
+						200,
+						[],
+						wp_json_encode(
+							[ 'data' => [ [ 'id' => 'shared-model', 'name' => 'Shared model' ] ] ]
+						)
+					);
+				}
+
+				return new Response(
+					200,
+					[],
+					wp_json_encode(
+						[
+							'id'      => 'result-id',
+							'choices' => [
+								[
+									'message'       => [ 'role' => 'assistant', 'content' => 'Fallback worked.' ],
+									'finish_reason' => 'stop',
+								],
+							],
+							'usage'   => [ 'prompt_tokens' => 1, 'completion_tokens' => 2, 'total_tokens' => 3 ],
+						]
+					)
+				);
+			}
+		};
+
+		\UltimateAiConnectorCompatibleEndpoints\ProviderFactory::registerAllProviders();
+		\UltimateAiConnectorCompatibleEndpoints\register_canonical_provider();
+		\WordPress\AiClient\AiClient::defaultRegistry()->setHttpTransporter( $transport );
+
+		$result = \WordPress\AiClient\AiClient::prompt( 'Hello' )
+			->usingProvider( 'ultimate-ai-connector-compatible-endpoints' )
+			->generateText();
+
+		$this->assertSame( 'Fallback worked.', $result );
+		$this->assertSame(
+			[
+				[
+					'url'           => 'http://alpha.example.test/v1/models',
+					'authorization' => 'Bearer alpha-key',
+				],
+				[
+					'url'           => 'https://beta.example.test/v1/models',
+					'authorization' => 'Bearer beta-key',
+				],
+				[
+					'url'           => 'http://alpha.example.test/v1/chat/completions',
+					'authorization' => 'Bearer alpha-key',
+				],
+				[
+					'url'           => 'https://beta.example.test/v1/chat/completions',
+					'authorization' => 'Bearer beta-key',
+				],
+			],
+			$attempts
+		);
 	}
 
 	/**
