@@ -127,6 +127,10 @@ class CompatibleEndpointProvider extends AbstractApiProvider {
 	 * {@inheritDoc}
 	 */
 	protected static function createModelMetadataDirectory(): ModelMetadataDirectoryInterface {
+		if ( ! empty( get_providers() ) ) {
+			return new OrderedProviderModelDirectory();
+		}
+
 		return new CompatibleEndpointModelDirectory( '', self::$defaultModel, self::$imageProtocol, self::$imageModel );
 	}
 }

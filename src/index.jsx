@@ -502,7 +502,8 @@ function ProviderCard( {
 /**
  * Main connector card component rendered on the Connectors page.
  */
-function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
+function CompatibleEndpointConnectorCard( { slug, label, name, description, logo } ) {
+	const connectorName = label || name || __( 'Compatible Endpoint' );
 	const [ providers, setProviders ] = useState( [] );
 	const [ providerOrder, setProviderOrder ] = useState( [] );
 	const [ isExpanded, setIsExpanded ] = useState( false );
@@ -846,7 +847,7 @@ function CompatibleEndpointConnectorCard( { slug, label, description, logo } ) {
 		<ConnectorItem
 			className="connector-item--ultimate-ai-connector-compatible-endpoints"
 			logo={ logo || <Logo /> }
-			name={ label }
+			name={ connectorName }
 			description={ description }
 			actionArea={ actionArea }
 		>

@@ -22,6 +22,8 @@ class HttpFiltersTest extends WP_UnitTestCase {
 		parent::tear_down();
 		delete_option( 'ultimate_ai_connector_endpoint_url' );
 		delete_option( 'ultimate_ai_connector_timeout' );
+		delete_option( 'ultimate_ai_connector_providers' );
+		delete_option( 'ultimate_ai_connector_provider_order' );
 	}
 
 	/**
@@ -38,6 +40,39 @@ class HttpFiltersTest extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( 300.0, $result['timeout'] );
+	}
+
+	/**
+	 * Each endpoint uses its own timeout when providers share a hostname.
+	 */
+	public function test_increase_timeout_matches_endpoint_port(): void {
+		update_option(
+			'ultimate_ai_connector_providers',
+			[
+				[
+					'endpoint_url' => 'http://localhost:65534/v1',
+					'timeout'      => 2,
+					'enabled'      => true,
+				],
+				[
+					'endpoint_url' => 'http://localhost:11434/v1',
+					'timeout'      => 120,
+					'enabled'      => true,
+				],
+			]
+		);
+
+		$first = \UltimateAiConnectorCompatibleEndpoints\increase_timeout(
+			[ 'timeout' => 1 ],
+			'http://localhost:65534/v1/chat/completions'
+		);
+		$second = \UltimateAiConnectorCompatibleEndpoints\increase_timeout(
+			[ 'timeout' => 1 ],
+			'http://localhost:11434/v1/chat/completions'
+		);
+
+		$this->assertSame( 2.0, $first['timeout'] );
+		$this->assertSame( 120.0, $second['timeout'] );
 	}
 
 	/**

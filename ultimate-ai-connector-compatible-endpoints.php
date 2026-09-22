@@ -62,6 +62,7 @@ function load_sdk_dependent_classes(): void {
 	require_once __DIR__ . '/inc/class-provider.php';
 	require_once __DIR__ . '/inc/class-model.php';
 	require_once __DIR__ . '/inc/class-model-directory.php';
+	require_once __DIR__ . '/inc/class-ordered-provider-router.php';
 	// Image generation was added to the SDK after the text generation APIs.
 	// Keep the connector loadable on WordPress installations with older SDKs.
 	if ( class_exists( 'WordPress\\AiClient\\Providers\\OpenAiCompatibleImplementation\\AbstractOpenAiCompatibleImageGenerationModel' ) ) {

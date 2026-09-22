@@ -3,7 +3,7 @@
 	"phpVersion": "8.2",
 	"plugins": [
 		".",
-		"WordPress/gutenberg"
+		"WordPress/gutenberg#v23.0.0"
 	],
 	"config": {
 		"WP_DEBUG": true,
@@ -17,7 +17,7 @@
 			"phpVersion": "8.2",
 			"plugins": [
 				".",
-				"WordPress/gutenberg"
+				"WordPress/gutenberg#v23.0.0"
 			],
 			"config": {
 				"WP_DEBUG": true,

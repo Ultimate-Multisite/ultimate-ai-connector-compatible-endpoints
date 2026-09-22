@@ -68,14 +68,9 @@ function increase_timeout( array $parsed_args, string $url ): array {
 		return $parsed_args;
 	}
 
-	$request_host = wp_parse_url( $url, PHP_URL_HOST );
-	if ( ! $request_host ) {
-		return $parsed_args;
-	}
-
 	foreach ( get_all_endpoint_configs() as $config ) {
-		$endpoint_host = wp_parse_url( $config['url'], PHP_URL_HOST );
-		if ( $endpoint_host && $endpoint_host === $request_host ) {
+		$endpoint_url = rtrim( $config['url'], '/' );
+		if ( 0 === strpos( $url, $endpoint_url . '/' ) ) {
 			$parsed_args['timeout'] = max(
 				(float) ( $parsed_args['timeout'] ?? 30 ),
 				(float) $config['timeout']

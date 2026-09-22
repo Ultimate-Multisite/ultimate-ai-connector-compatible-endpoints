@@ -55,6 +55,7 @@ function register_provider(): void {
 	$providers = get_providers();
 	if ( ! empty( $providers ) ) {
 		ProviderFactory::registerAllProviders();
+		register_canonical_provider();
 		mark_connector_configured();
 		return;
 	}
@@ -94,6 +95,41 @@ function register_provider(): void {
 	// Mark as configured so the WP 7.0 connector system and AI plugin
 	// recognise this connector as having valid credentials.
 	mark_connector_configured();
+}
+
+/**
+ * Registers the plugin slug as an aggregate provider for external callers.
+ *
+ * The dynamic `ai-provider-for-any-openai-compatible[-N]` providers remain
+ * registered for ai-agent compatibility. The canonical provider gives code
+ * using the connector ID a stable key and routes requests through enabled
+ * endpoints in configured order.
+ */
+function register_canonical_provider(): void {
+	$primary = get_primary_provider();
+	if ( ! $primary ) {
+		return;
+	}
+
+	CompatibleEndpointProvider::$endpointUrl = (string) $primary['endpoint_url'];
+	CompatibleEndpointProvider::$defaultModel = (string) ( $primary['default_model'] ?? '' );
+	CompatibleEndpointProvider::$imageProtocol = (string) ( $primary['image_protocol'] ?? 'none' );
+	CompatibleEndpointProvider::$imageModel = (string) ( $primary['image_model'] ?? '' );
+	CompatibleEndpointModel::registerEndpointUrl( CONNECTOR_SLUG, (string) $primary['endpoint_url'] );
+	CompatibleEndpointModel::registerEndpointType( CONNECTOR_SLUG, (string) ( $primary['endpoint_type'] ?? 'generic' ) );
+	register_image_endpoint_url( CONNECTOR_SLUG, (string) $primary['endpoint_url'] );
+
+	$registry = AiClient::defaultRegistry();
+	if ( ! $registry->hasProvider( CompatibleEndpointProvider::class ) ) {
+		$registry->registerProvider( CompatibleEndpointProvider::class );
+	}
+
+	// OrderedProviderTransporter replaces this per request with the key for the
+	// endpoint being attempted. A non-empty value satisfies the SDK contract.
+	$registry->setProviderRequestAuthentication(
+		CompatibleEndpointProvider::class,
+		new ApiKeyRequestAuthentication( '[redacted-credential]' )
+	);
 }
 
 /**
@@ -154,6 +190,9 @@ function consolidate_connector_card( \WP_Connector_Registry $registry ): void {
 		if ( $registry->is_registered( $sdk_provider_id ) ) {
 			$registry->unregister( $sdk_provider_id );
 		}
+	}
+	if ( $registry->is_registered( CONNECTOR_SLUG ) ) {
+		$registry->unregister( CONNECTOR_SLUG );
 	}
 
 	// Register a single canonical card matching the JS SLUG so the React
