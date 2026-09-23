@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Image generation models for compatible AI endpoints.
  *
@@ -12,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use WordPress\AiClient\Providers\Http\DTO\Request;
+use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\Enums\HttpMethodEnum;
 use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCompatibleImageGenerationModel;
 
@@ -31,6 +34,19 @@ class CompatibleEndpointImageModel extends AbstractOpenAiCompatibleImageGenerati
 	 */
 	public static function registerEndpointUrl( string $sdk_provider_id, string $endpoint_url ): void {
 		self::$endpointUrls[ $sdk_provider_id ] = rtrim( $endpoint_url, '/' );
+	}
+
+	/**
+	 * Wraps canonical-plugin requests with ordered endpoint failover.
+	 *
+	 * @param HttpTransporterInterface $httpTransporter SDK HTTP transporter.
+	 */
+	public function setHttpTransporter( HttpTransporterInterface $httpTransporter ): void {
+		if ( CONNECTOR_SLUG === $this->providerMetadata()->getId() ) {
+			$httpTransporter = new OrderedProviderTransporter( $httpTransporter );
+		}
+
+		parent::setHttpTransporter( $httpTransporter );
 	}
 
 	/** {@inheritDoc} */

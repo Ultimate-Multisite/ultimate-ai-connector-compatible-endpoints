@@ -81,7 +81,11 @@ class CompatibleEndpointChatImageModel extends CompatibleEndpointImageModel {
 				if ( null === $image_data ) {
 					throw ResponseException::fromInvalidData( $this->providerMetadata()->getName(), "choices[{$choice_index}].message.images[{$image_index}]", 'Expected a URL, data URI, or base64 image value.' );
 				}
-				$candidates[] = new Candidate( new Message( MessageRoleEnum::model(), [ new MessagePart( new File( $image_data, $this->imageMimeType( $image_data ) ) ) ] ), FinishReasonEnum::stop() );
+				$image_mime_type = $this->imageMimeType( $image_data );
+				if ( null === $image_mime_type ) {
+					throw ResponseException::fromInvalidData( $this->providerMetadata()->getName(), "choices[{$choice_index}].message.images[{$image_index}]", 'Expected a supported PNG, JPEG, GIF, or WebP image.' );
+				}
+				$candidates[] = new Candidate( new Message( MessageRoleEnum::model(), [ new MessagePart( new File( $image_data, $image_mime_type ) ) ] ), FinishReasonEnum::stop() );
 			}
 		}
 
@@ -105,11 +109,47 @@ class CompatibleEndpointChatImageModel extends CompatibleEndpointImageModel {
 		return isset( $image['image_url']['url'] ) && is_string( $image['image_url']['url'] ) ? $image['image_url']['url'] : null;
 	}
 
-	/** @param string $image_data Normalized image data. @return string */
-	private function imageMimeType( string $image_data ): string {
-		if ( preg_match( '#^data:(image/[a-zA-Z0-9.+-]+);base64,#', $image_data, $matches ) ) {
-			return $matches[1];
+	/** @param string $image_data Normalized image data. @return string|null */
+	private function imageMimeType( string $image_data ): ?string {
+		if ( preg_match( '#^data:(image/[a-zA-Z0-9.+-]+);base64,#i', $image_data, $matches ) ) {
+			return $this->supportedImageMimeType( strtolower( $matches[1] ) );
 		}
-		return 'image/png';
+
+		$url_path = wp_parse_url( $image_data, PHP_URL_PATH );
+		if ( preg_match( '#^https?://#i', $image_data ) && is_string( $url_path ) ) {
+			$extension = strtolower( pathinfo( $url_path, PATHINFO_EXTENSION ) );
+			return [
+				'gif'  => 'image/gif',
+				'jpeg' => 'image/jpeg',
+				'jpg'  => 'image/jpeg',
+				'png'  => 'image/png',
+				'webp' => 'image/webp',
+			][ $extension ] ?? null;
+		}
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decoding is required to identify an image payload's declared format.
+		$decoded_image = base64_decode( $image_data, true );
+		if ( ! is_string( $decoded_image ) ) {
+			return null;
+		}
+		if ( 0 === strpos( $decoded_image, "\x89PNG\r\n\x1a\n" ) ) {
+			return 'image/png';
+		}
+		if ( 0 === strpos( $decoded_image, "\xff\xd8\xff" ) ) {
+			return 'image/jpeg';
+		}
+		if ( 0 === strpos( $decoded_image, 'GIF87a' ) || 0 === strpos( $decoded_image, 'GIF89a' ) ) {
+			return 'image/gif';
+		}
+		if ( 0 === strpos( $decoded_image, 'RIFF' ) && 'WEBP' === substr( $decoded_image, 8, 4 ) ) {
+			return 'image/webp';
+		}
+
+		return null;
+	}
+
+	/** @param string $mime_type Candidate MIME type. @return string|null */
+	private function supportedImageMimeType( string $mime_type ): ?string {
+		return in_array( $mime_type, [ 'image/gif', 'image/jpeg', 'image/png', 'image/webp' ], true ) ? $mime_type : null;
 	}
 }
