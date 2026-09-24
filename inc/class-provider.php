@@ -111,7 +111,7 @@ class CompatibleEndpointProvider extends AbstractApiProvider {
 	 * makes an AI generation request.
 	 */
 	protected static function createProviderAvailability(): ProviderAvailabilityInterface {
-		return new class implements ProviderAvailabilityInterface {
+		return new class() implements ProviderAvailabilityInterface {
 			/**
 			 * Checks whether the endpoint URL is configured.
 			 *

@@ -153,7 +153,7 @@ class CompatibleEndpointModel extends AbstractOpenAiCompatibleTextGenerationMode
 	 * preserved (thought parts are stripped) so plain OpenAI Chat Completions
 	 * clones continue to work identically.
 	 *
-	 * @param list<Message>       $prompt The prompt to generate text for.
+	 * @param list<Message> $prompt The prompt to generate text for.
 	 * @return array<string,mixed>        The parameters for the API request.
 	 */
 	protected function prepareGenerateTextParams( array $prompt ): array {

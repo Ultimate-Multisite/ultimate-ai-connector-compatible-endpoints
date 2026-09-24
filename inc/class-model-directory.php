@@ -83,10 +83,10 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 	 * @param string $imageModel    Explicit image generation model ID.
 	 */
 	public function __construct( string $endpointUrl = '', string $defaultModel = '', string $imageProtocol = 'none', string $imageModel = '' ) {
-		$this->endpointUrl = $endpointUrl !== ''
+		$this->endpointUrl   = '' !== $endpointUrl
 			? rtrim( $endpointUrl, '/' )
 			: rtrim( CompatibleEndpointProvider::$endpointUrl, '/' );
-		$this->defaultModel = $defaultModel;
+		$this->defaultModel  = $defaultModel;
 		$this->imageProtocol = $imageProtocol;
 		$this->imageModel    = $imageModel;
 	}
@@ -99,7 +99,7 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 
 		// When a default model is configured, sort it first so SDK auto-discovery
 		// picks it over other models with the same capabilities.
-		if ( $this->defaultModel !== '' && isset( $models[ $this->defaultModel ] ) ) {
+		if ( '' !== $this->defaultModel && isset( $models[ $this->defaultModel ] ) ) {
 			$default = $models[ $this->defaultModel ];
 			unset( $models[ $this->defaultModel ] );
 			array_unshift( $models, $default );
@@ -146,9 +146,9 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 	/**
 	 * Creates a request for the endpoint API.
 	 *
-	 * @param HttpMethodEnum                 $method HTTP method.
-	 * @param string                         $path API path relative to endpoint URL.
-	 * @param array<string, string|string[]> $headers Request headers.
+	 * @param HttpMethodEnum                   $method HTTP method.
+	 * @param string                           $path API path relative to endpoint URL.
+	 * @param array<string, string|string[]>   $headers Request headers.
 	 * @param string|array<string, mixed>|null $data Request data.
 	 * @return Request Request DTO.
 	 */
@@ -233,7 +233,7 @@ class CompatibleEndpointModelDirectory implements ModelMetadataDirectoryInterfac
 			CapabilityEnum::textGeneration(),
 			CapabilityEnum::chatHistory(),
 		];
-		$text_options = [
+		$text_options      = [
 			new SupportedOption( OptionEnum::systemInstruction() ),
 			new SupportedOption( OptionEnum::maxTokens() ),
 			new SupportedOption( OptionEnum::temperature() ),

@@ -187,6 +187,7 @@ class DynamicCompatibleEndpointProvider extends AbstractApiProvider {
 /**
  * Factory for creating and managing dynamic provider classes.
  */
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Dynamic base and eval factory share one static SDK contract.
 class ProviderFactory {
 
 	/**
@@ -245,23 +246,23 @@ class ProviderFactory {
 		}
 
 		// Global-namespace class name — unique by provider ID slug.
-		$class_name    = self::CLASS_PREFIX . self::sanitize_class_name( $id );
+		$class_name      = self::CLASS_PREFIX . self::sanitize_class_name( $id );
 		$sdk_provider_id = self::sdkProviderIdForIndex( $index );
 
 		// Define the dynamic class only if not already defined.
 		if ( ! class_exists( $class_name, false ) ) {
-			$endpoint_url  = $config['endpoint_url'] ?? '';
-			$default_model = $config['default_model'] ?? '';
-			$timeout       = (int) ( $config['timeout'] ?? 360 );
+			$endpoint_url   = $config['endpoint_url'] ?? '';
+			$default_model  = $config['default_model'] ?? '';
+			$timeout        = (int) ( $config['timeout'] ?? 360 );
 			$image_protocol = $config['image_protocol'] ?? 'none';
 			$image_model    = $config['image_model'] ?? '';
 
 			// Escape values for embedding in a PHP single-quoted string.
-			$escaped_id            = addcslashes( $id, "'\\" );
-			$escaped_name          = addcslashes( $name, "'\\" );
-			$escaped_endpoint_url  = addcslashes( $endpoint_url, "'\\" );
-			$escaped_default_model = addcslashes( $default_model, "'\\" );
-			$escaped_sdk_id        = addcslashes( $sdk_provider_id, "'\\" );
+			$escaped_id             = addcslashes( $id, "'\\" );
+			$escaped_name           = addcslashes( $name, "'\\" );
+			$escaped_endpoint_url   = addcslashes( $endpoint_url, "'\\" );
+			$escaped_default_model  = addcslashes( $default_model, "'\\" );
+			$escaped_sdk_id         = addcslashes( $sdk_provider_id, "'\\" );
 			$escaped_image_protocol = addcslashes( $image_protocol, "'\\" );
 			$escaped_image_model    = addcslashes( $image_model, "'\\" );
 
@@ -304,7 +305,7 @@ class ProviderFactory {
 		}
 
 		$class_name = self::createProviderClass( $config, $index );
-		$registry  = AiClient::defaultRegistry();
+		$registry   = AiClient::defaultRegistry();
 
 		if ( $registry->hasProvider( $class_name ) ) {
 			return true;

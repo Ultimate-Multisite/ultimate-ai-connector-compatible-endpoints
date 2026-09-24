@@ -69,17 +69,21 @@ Config: `.wp-env.json`. Override ports: `.wp-env.override.json` (gitignored).
 
 ## Linting
 
-No linter is configured. Follow WordPress Coding Standards manually.
-
 ```bash
-# If adding PHP linting later:
-composer require --dev wp-coding-standards/wpcs
-./vendor/bin/phpcs --standard=WordPress inc/ *.php
+# Validate Composer configuration and run PHPCS:
+composer lint
+# or:
+pnpm run lint:php
 
-# If adding JS linting later:
- pnpm add --save-dev @wordpress/eslint-plugin
- pnpm exec eslint src/
+# Automatically fix safe PHPCS violations:
+composer phpcbf
+# or:
+pnpm run lint:php:fix
 ```
+
+The `phpcs.xml.dist` ruleset enforces WordPress coding standards, PHP 7.4+
+compatibility, output escaping, nonce verification, the plugin text domain,
+and one named object structure per file. CI treats violations as blocking.
 
 ## Code Style
 

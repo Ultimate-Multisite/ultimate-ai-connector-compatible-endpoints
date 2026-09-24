@@ -77,10 +77,10 @@ function rest_list_models( \WP_REST_Request $request ) {
 	if ( empty( $endpoint_url ) ) {
 		// Resolution order:
 		// 1. If a config or SDK provider ID was requested, use that provider.
-		//    This is the multi-provider path used by the AI Agent loop and the
-		//    `wp sd-ai-agent models --provider=...` CLI command — without this,
-		//    every OpenAI-compatible provider would resolve to the same primary
-		//    config and the agent would see duplicate model lists.
+		// This is the multi-provider path used by the AI Agent loop and the
+		// `wp sd-ai-agent models --provider=...` CLI command — without this,
+		// every OpenAI-compatible provider would resolve to the same primary
+		// config and the agent would see duplicate model lists.
 		// 2. Otherwise, fall back to the highest-priority configured provider.
 		// 3. Finally, fall back to the legacy single-provider option.
 		if ( null === $resolved ) {
@@ -92,9 +92,9 @@ function rest_list_models( \WP_REST_Request $request ) {
 			// Fall back to legacy single-provider option.
 			$legacy_endpoint_url = (string) get_option( 'ultimate_ai_connector_endpoint_url', '' );
 			if ( '' !== $legacy_endpoint_url ) {
-				$resolved = [
-					'endpoint_url'  => $legacy_endpoint_url,
-					'api_key'       => (string) get_option( 'ultimate_ai_connector_api_key', '' ),
+				$resolved     = [
+					'endpoint_url'   => $legacy_endpoint_url,
+					'api_key'        => (string) get_option( 'ultimate_ai_connector_api_key', '' ),
 					'image_protocol' => (string) get_option( 'ultimate_ai_connector_image_protocol', 'none' ),
 					'image_model'    => (string) get_option( 'ultimate_ai_connector_image_model', '' ),
 				];

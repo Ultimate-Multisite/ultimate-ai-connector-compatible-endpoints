@@ -174,7 +174,7 @@ class ImageGenerationTest extends WP_UnitTestCase {
 				[
 					'id' => 'chat-image-result',
 					'choices' => [
-						[ 'message' => [ 'images' => [ 'https://images.example.test/a.png', 'data:image/jpeg;base64,aGVsbG8=', 'aGVsbG8=' ] ] ],
+						[ 'message' => [ 'images' => [ 'https://images.example.test/a.png', 'data:image/jpeg;base64,aGVsbG8=', 'iVBORw0KGgo=' ] ] ],
 					],
 				]
 			)
@@ -185,8 +185,10 @@ class ImageGenerationTest extends WP_UnitTestCase {
 
 		$this->assertCount( 3, $result->toImageFiles() );
 		$this->assertTrue( $result->toImageFiles()[0]->isRemote() );
+		$this->assertSame( 'image/png', $result->toImageFiles()[0]->getMimeType() );
 		$this->assertSame( 'image/jpeg', $result->toImageFiles()[1]->getMimeType() );
 		$this->assertTrue( $result->toImageFiles()[2]->isInline() );
+		$this->assertSame( 'image/png', $result->toImageFiles()[2]->getMimeType() );
 	}
 
 	/**
