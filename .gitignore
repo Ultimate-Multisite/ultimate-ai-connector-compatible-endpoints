@@ -7,3 +7,4 @@ cypress/screenshots/
 cypress/videos/
 .beads/
 *.zip
+.aidevops.json
